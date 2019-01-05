@@ -39,7 +39,7 @@ class Encoder(nn.Module):
             if len(obs_traj_idxs[framenum]) == 0:
                 continue
 
-            batch = frame.size(1)
+            batch = frame.size(0)
             h_curr = torch.index_select(hidden_state, 1, obs_traj_idxs[framenum])
             c_curr = torch.index_select(cell_state, 1, obs_traj_idxs[framenum])
             frame_embedding = self.spatial_embedding(frame.view(-1, self.input_dim))
@@ -49,7 +49,7 @@ class Encoder(nn.Module):
             hidden_state[:, obs_traj_idxs[framenum].data, :] = h_curr
             cell_state[:, obs_traj_idxs[framenum].data, :] = c_curr
         
-        final_h = hidden_state[:, obs_traj_idxs[-1].data, :]
+        final_h = torch.index_select(hidden_state, 1, obs_traj_idxs[-1])
         return final_h
 
     
