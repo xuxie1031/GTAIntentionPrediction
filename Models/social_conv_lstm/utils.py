@@ -35,7 +35,7 @@ def get_conv_mask(frame, units, num_nodes, encoder_dim, neighbor_size, grid_size
             other_grid2lookup[cell_x*grid_size+cell_y] = other_idx
             frame_mask[curr_idx, cell_x, cell_y, :] = 1.0
         
-        other_grid2lookup = collections.OrderedDict(ordered(other_grid2lookup.items()))
+        other_grid2lookup = collections.OrderedDict(sorted(other_grid2lookup.items()))
         frame_nbr = torch.index_select(frame, 0, torch.tensor(list(other_grid2lookup.values())).long())
         frame_nbrs.append(frame_nbr)
     
