@@ -1,0 +1,84 @@
+import torch
+import torch.nn as nn
+
+import numpy as np
+
+
+class WriteOnceDict(dict):
+	def __setitem__(self, key, value):
+		if not key in self:
+			super(WriteOnceDict, self).__setitem__(key, value)
+
+def data_vectorize(data_seq):
+    first_value_dict = WriteOnceDict()
+    vectorized_seq = data_seq.clone()
+
+    num_nodes = data_seq.size(1)
+    for i, frame in enumerate(data_seq):
+        for node in range(num_nodes):
+            first_value_dict[node] = frame[node, :]
+            vectorized_seq[i, node, :] = frame[node, :]-first_value_dict[node]
+    
+    return vectorized_seq, first_value_dict
+
+
+def data_revert(data_seq, first_value_dict):
+    reverted_seq = data_seq.clone()
+
+    num_nodes = data_seq.size(1)
+    for i, frame in enumerate(data_seq):
+        for node in range(num_nodes):
+            reverted_seq[i, node, :] = frame[node, :]+first_value_dict[node]
+    
+    return reverted_seq
+
+
+def get_coef(outputs):
+    mux, muy, sx, sy, corr = outputs[:, :, 0], outputs[:, :, 1], outputs[:, :, 2], outputs[:, :, 3], outputs[:, :, 4]
+
+    sx = torch.exp(sx)
+    sy = torch.exp(sy)
+    corr = torch.tanh(corr)
+
+    return mux, muy, sx, sy, corr
+
+
+def gaussian_likelihood_2d(outputs, target):
+    seq_len = outputs.size(0)
+    mux, muy, sx, sy, corr = get_coef(outputs)
+
+    normx = target[:, :, 0]-mux
+    normy = target[:, :, 1]-muy
+    sxsy = sx*sy
+
+    z = (normx/sx)**2+(normy/sy)**2-2*(corr*normx*normy/sxsy)
+    negrho = 1-corr**2
+
+    result = torch.exp(-z/(2*negrho))
+    denom = 2*np.pi*(sxsy*torch.sqrt(negrho))
+
+    result /= denom
+
+    epsilon = 1e-20
+    result = -torch.log(torch.clamp(result, min=epsilon))
+
+    loss = torch.mean(result)
+    return loss
+
+
+def sample_gaussian_2d(mux, muy, sx, sy, corr):
+    o_mux, o_muy, o_sx, o_sy, o_corr = mux[0, :], muy[0, :], sx[0, :], sy[0, :], corr[0, :]
+
+    batch = mux.size(1)
+    next_x = torch.zeros(batch)
+    next_y = torch.zeros(batch)
+
+    for node in range(batch):
+        mean = [o_mux[node], o_muy[node]]
+        cov = [[o_sx[node]*o_sx[node], o_corr[node]*o_sx[node]*o_sy[node]], [o_corr[node]*o_sx[node]*o_sy[node], o_sy[node]*o_sy[node]]]
+
+        next_v = np.random.multivariate_normal(mean, cov, 1)
+        next_x[node] = next_v[0, 0]
+        next_y[node] = next_v[0, 1]
+    
+    return next_x, next_y

@@ -31,25 +31,15 @@ class Encoder(nn.Module):
                 torch.zeros(self.num_layers, batch, self.h_dim)
             )
 
-    
-    def forward(self, obs_traj, obs_traj_idxs, num_nodes):
-        (hidden_state, cell_state) = self.init_hidden(num_nodes, self.use_cuda)
+    def forward(self, obs_traj):
+        batch = obs_traj.size(1)
 
-        for framenum, frame in enumerate(obs_traj):
-            if len(obs_traj_idxs[framenum]) == 0:
-                continue
+        obs_traj_embedding = self.spatial_embedding(obs_traj.view(-1, self.input_dim))
+        obs_traj_embedding = obs_traj_embedding.view(-1, batch, self.embedding_dim)
 
-            batch = frame.size(0)
-            h_curr = torch.index_select(hidden_state, 1, obs_traj_idxs[framenum])
-            c_curr = torch.index_select(cell_state, 1, obs_traj_idxs[framenum])
-            frame_embedding = self.spatial_embedding(frame.view(-1, self.input_dim))
-            frame_embedding = frame_embedding.view(1, batch, self.embedding_dim)
-
-            _, (h_curr, c_curr) = self.encoder(frame_embedding, (h_curr, c_curr))
-            hidden_state[:, obs_traj_idxs[framenum].data, :] = h_curr
-            cell_state[:, obs_traj_idxs[framenum].data, :] = c_curr
-        
-        final_h = torch.index_select(hidden_state, 1, obs_traj_idxs[-1])
+        state_tuple = self.init_hidden(batch, self.use_cuda)
+        output, state = self.encoder(obs_traj_embedding, state_tuple)
+        final_h = state[0]
         return final_h
 
     
@@ -205,12 +195,12 @@ class TrajectoryGenerator(nn.Module):
         return decoder_h
 
     
-    def forward(self, obs_traj, objs_traj_rel, obs_traj_idxs, num_nodes):
-        batch = len(obs_traj_idxs[-1])
+    def forward(self, obs_traj, objs_traj_rel, num_nodes):
+        batch = obs_traj.size(1)
         if batch == 0:
             return None
 
-        final_encoder_h = self.encoder(objs_traj_rel, obs_traj_idxs, num_nodes)
+        final_encoder_h = self.encoder(objs_traj_rel)
 
         end_pos = obs_traj[-1, :, :]
         pool_h = self.pool_net(final_encoder_h, end_pos)
@@ -234,13 +224,7 @@ class TrajectoryGenerator(nn.Module):
         decoder_out = self.decoder(last_pos, last_pos_rel, state_tuple)
         pred_traj_fake_rel, final_decoder_h = decoder_out
 
-        if self.use_cuda:
-            pred_traj_fake_rel_ret = torch.zeros(self.pred_len, num_nodes, self.input_dim).cuda()
-        else:
-            pred_traj_fake_rel_ret = torch.zeros(self.pred_len, num_nodes, self.input_dim)
-        pred_traj_fake_rel_ret[:, obs_traj_idxs[-1].data, :] = pred_traj_fake_rel
-
-        return pred_traj_fake_rel_ret
+        return pred_traj_fake_rel
 
 
 class TrajectoryDiscriminator(nn.Module):
@@ -292,8 +276,8 @@ class TrajectoryDiscriminator(nn.Module):
             self.to(torch.device('cuda:0'))
 
     
-    def forward(self, traj, traj_rel, traj_idx, num_nodes):
-        final_h = self.encoder(traj_rel, traj_idx, num_nodes)
+    def forward(self, traj, traj_rel, num_nodes):
+        final_h = self.encoder(traj_rel)
 
         if self.d_type == 'local':
             classifier_input = final_h.squeeze()
@@ -303,10 +287,4 @@ class TrajectoryDiscriminator(nn.Module):
             )
         
         scores = self.real_classifier(classifier_input)
-        if self.use_cuda:
-            scores_ret = torch.zeros(scores.size(0), num_nodes).cuda()
-        else:
-            scores_ret = torch.zeros(scores.size(0), num_nodes)
-        scores_ret[traj_idx[-1].data, :] = scores
-
-        return scores_ret
+        return scores
