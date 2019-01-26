@@ -129,6 +129,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 if args.use_cuda:
                     input_data = input_data.cuda()
+                    pred_data = pred_data.cuda()
                 grids = get_grid_mask_seq(input_data, dataloader_test.units, args.neighbor_size, args.grid_size, args.use_cuda)
                 input_data, first_values_dict = data_vectorize(input_data)
 
@@ -138,8 +139,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                 # get err_batch
             
             t_end = time.time()
-            loss_batch /= dataloader_test.batch_size
-            loss_epoch += loss_batch
+            err_batch /= dataloader_test.batch_size
+            err_epoch += err_batch
             num_batch += 1
 
             print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
@@ -153,7 +154,6 @@ def main():
     parser.add_argument('--output_size', type=int, default=5)
     parser.add_argument('--embedding_size', type=int, default=64)
     parser.add_argument('--hidden_size', type=int, default=128)
-    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--obs_len', type=int, default=8)
     parser.add_argument('--pred_len', type=int, default=12)
     parser.add_argument('--grad_clip', type=float, default=10.0)

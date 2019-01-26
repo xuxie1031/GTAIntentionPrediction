@@ -50,7 +50,8 @@ def discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimiz
     
     loss_batch_d = 0
     loss = torch.zeros(1)
-    loss = loss.cuda() if args.use_cuda
+    if args.use_cuda:
+        loss = loss.cuda()
 
     for idx in range(len(input_data_list)):
         input_data = input_data_list[idx]
@@ -97,7 +98,8 @@ def generator_step(args, batch, generator, discriminator, g_loss_fn, optimizer_g
 
     loss_batch_g = 0
     loss = torch.zeros(1)
-    loss = loss.cuda() if args.use_cuda
+    if args.use_cuda:
+        loss = loss.cuda()
 
     for idx in range(len(input_data_list)):
         input_data = input_data_list[idx]

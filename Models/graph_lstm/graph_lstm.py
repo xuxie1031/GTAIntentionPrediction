@@ -5,8 +5,6 @@ import torch.nn as nn
 class GraphLSTM(nn.Module):
     def __init__(self, args):
         self.use_cuda = args.use_cuda
-        self.dyn_veh_hidden_size = args.dyn_veh_hidden_size
-        self.dyn_ped_hidden_size = args.dyn_ped_hidden_size
         self.graph_veh_hidden_size = args.graph_veh_hidden_size
         self.graph_ped_hidden_size = args.graph_ped_hidden_size
 
@@ -64,7 +62,7 @@ class GraphLSTM(nn.Module):
 
             # self vehicle
             veh_dyn_embedding = self.dropout(self.relu(self.dyn_veh_embedding_layer(veh_frame)))
-            ped_dyn_embedding = self.dropout(self.relu(self.dyn_ped_embedding_layer(ped_frame)))
+            # ped_dyn_embedding = self.dropout(self.relu(self.dyn_ped_embedding_layer(ped_frame)))
 
             veh_graph_embedding = self.dropout(self.relu(self.graph_veh_embedding_layer(veh_frame)))
             ped_graph_embedding = self.dropout(self.relu(self.graph_ped_embedding_layer(ped_frame)))
