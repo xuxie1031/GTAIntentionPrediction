@@ -6,7 +6,7 @@ from graph_lstm import GraphLSTM
 from utils import *
 
 
-def sample(net, veh_input_data, ped_input_data, veh_num_nodes, ped_num_nodes, args):
+def sample(net, veh_input_data, ped_input_data, ped_pred_data, veh_num_nodes, ped_num_nodes, args):
     with torch.no_grad():
         cell_hidden_state_tuple = (torch.zeros(veh_num_nodes, args.cell_hidden_size), torch.zeros(veh_num_nodes, args.cell_hidden_size))
         graph_veh_hidden_state_tuple = (torch.zeros(veh_num_nodes, args.graph_veh_hidden_size), torch.zeros(veh_num_nodes, args.graph_veh_hidden_size))
@@ -23,7 +23,23 @@ def sample(net, veh_input_data, ped_input_data, veh_num_nodes, ped_num_nodes, ar
         for tstep in range(args.obs_len):
             output_obs, cell_hidden_state_tuple, graph_veh_hidden_state_tuple, graph_ped_hidden_state_tuple = \
                         net([veh_input_data[tstep]], [ped_input_data[tstep]], cell_hidden_state_tuple, graph_veh_hidden_state_tuple, graph_ped_hidden_state_tuple, 1, veh_num_nodes)
+
+            mux, muy, sx, sy, corr = get_coef(output_obs)
+            next_x, next_y = sample_gaussian_2d(mux, muy, sx, sy, corr)
+        
+        for tstep in range(args.pred_len):
+            output_data[tstep, :, 0] = next_x
+            output_data[tstep, :, 1] = next_y
+
+            curr_data = output_data[tstep]
             
+            outputs, cell_hidden_state_tuple, graph_veh_hidden_state_tuple, graph_ped_hidden_state_tuple = \
+                    net([curr_data], [ped_pred_data[tstep]], cell_hidden_state_tuple, graph_veh_hidden_state_tuple, graph_ped_hidden_state_tuple, 1, veh_num_nodes)
+            
+            mux, muy, sx, sy, corr = get_coef(outputs)
+            next_x, next_y = sample_gaussian_2d(mux, muy, sx, sy, corr)
+        
+        return output_data
 
 
 def exec_model(dataloader_train, dataloader_test, args):
@@ -101,14 +117,29 @@ def exec_model(dataloader_train, dataloader_test, args):
                 ids = ids_list[idx]
                 num_nodes = num_nodes_list[idx]
 
+                data = torch.cat((input_data, pred_data), dim=0)
                 if args.use_cuda:
-                    input_data = input_data.cuda()
-                    pred_data = pred_data.cuda()
+                    data = data.cuda()
                     ids = ids.cuda()
                 
-                input_data, first_values_dict = data_vectorize(input_data)
-                veh_data, ped_data = veh_ped_seperate(input_data, ids)
-                veh_num_nodes, ped_num_nodes = veh_data.size(1), ped_data.size(1)
+                veh_data, ped_data = veh_ped_seperate(data, ids)
+                veh_input_data, first_values_dict = data_vectorize(veh_data)
+                ped_data, _ = data_vectorize(ped_data)
+                ped_input_data = ped_data[:args.obs_len, :, :]
+                ped_pred_data = ped_data[:args.obs_len, :, :]
+
+                veh_num_nodes, ped_num_nodes = veh_input_data.size(1), ped_input_data.size(1)
+                ret_seq = sample(net, veh_input_data, ped_input_data, ped_pred_data, veh_num_nodes, ped_num_nodes, args)
+                ret_seq = data_revert(ret_seq, first_values_dict)
+
+                # get err_batch
+            
+            t_end = time.time()
+            err_batch /= dataloader_test.batch_size
+            err_epoch += err_batch
+            num_batch += 1
+
+            print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
 
 
 def main():

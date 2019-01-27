@@ -4,6 +4,8 @@ import torch.nn as nn
 
 class GraphLSTM(nn.Module):
     def __init__(self, args):
+        super(GraphLSTM, self).__init__()
+
         self.use_cuda = args.use_cuda
         self.graph_veh_hidden_size = args.graph_veh_hidden_size
         self.graph_ped_hidden_size = args.graph_ped_hidden_size
