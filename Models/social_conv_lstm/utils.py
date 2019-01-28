@@ -34,6 +34,16 @@ def data_revert(data_seq, first_value_dict):
     return reverted_seq
 
 
+def veh_ped_seperate(data_seq, ids, offset=100):
+    veh_seq_ids = (ids < offset).nonzero().squeeze()
+    ped_seq_ids = (ids >= offset).nonzero().squeeze()
+
+    veh_seq = torch.index_select(data_seq, 1, veh_seq_ids)
+    ped_seq = torch.index_select(data_seq, 1, ped_seq_ids)
+
+    return veh_seq, ped_seq
+
+
 def get_conv_mask(last_frame, frames, units, num_nodes, encoder_dim, neighbor_size, grid_size):
     width_unit, height_unit = units[0], units[1]
     last_frame_mask = np.zeros((num_nodes, width_unit, height_unit, encoder_dim))

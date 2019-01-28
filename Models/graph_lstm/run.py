@@ -108,6 +108,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
         num_batch = 0
         for batch in dataloader_test:
+            t_start = time.time()
             input_data_list, pred_data_list, ids_list, num_nodes_list = batch
 
             err_batch = 0.0

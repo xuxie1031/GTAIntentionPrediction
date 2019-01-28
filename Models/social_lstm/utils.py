@@ -43,6 +43,16 @@ def get_coef(outputs):
     return mux, muy, sx, sy, corr
 
 
+def veh_ped_seperate(data_seq, ids, offset=100):
+    veh_seq_ids = (ids < offset).nonzero().squeeze()
+    ped_seq_ids = (ids >= offset).nonzero().squeeze()
+
+    veh_seq = torch.index_select(data_seq, 1, veh_seq_ids)
+    ped_seq = torch.index_select(data_seq, 1, ped_seq_ids)
+
+    return veh_seq, ped_seq
+
+
 def gaussian_likelihood_2d(outputs, target):
     seq_len = outputs.size(0)
     mux, muy, sx, sy, corr = get_coef(outputs)

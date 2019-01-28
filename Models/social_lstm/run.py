@@ -65,7 +65,7 @@ def exec_model(dataloader_train, dataloader_test, args):
         num_batch = 0
         for batch in dataloader_train:
             t_start = time.time()
-            input_data_list, pred_data_list, num_nodes_list = batch
+            input_data_list, pred_data_list, _, num_nodes_list = batch
 
             loss_batch = 0
             for idx in range(dataloader_train.batch_size):
@@ -118,13 +118,13 @@ def exec_model(dataloader_train, dataloader_test, args):
         num_batch = 0
         for batch in dataloader_test:
             t_start = time.time()
-            input_data_list, pred_data_list, num_nodes_list = batch
+            input_data_list, pred_data_list, ids_list, num_nodes_list = batch
             
             err_batch = 0.0
             for idx in range(dataloader_test.batch_size):
                 input_data = input_data_list[idx]
                 pred_data = pred_data_list[idx]
-
+                ids = ids_list[idx]
                 num_nodes = num_nodes_list[idx]
 
                 if args.use_cuda:
@@ -135,7 +135,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 ret_seq = sample(net, input_data, grids, dataloader_test.units, num_nodes, args)
                 ret_seq = data_revert(ret_seq, first_values_dict)
-
+                veh_ret_seq, _ = veh_ped_seperate(ret_seq, ids)
                 # get err_batch
             
             t_end = time.time()

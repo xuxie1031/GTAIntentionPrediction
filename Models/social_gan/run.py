@@ -14,13 +14,14 @@ from utils import *
 
 
 def evaluate(args, batch, generator):
-    input_data_list, pred_data_list, num_nodes_list = batch
+    input_data_list, pred_data_list, ids_list, num_nodes_list = batch
 
     err_batch = 0
     with torch.no_grad():
         for idx in range(len(input_data_list)):
             input_data = input_data_list[idx]
             pred_data = pred_data_list[idx]
+            ids = ids_list[idx]
             num_nodes = num_nodes_list[idx]
 
             if args.use_cuda:
@@ -38,6 +39,8 @@ def evaluate(args, batch, generator):
                 rel_pred_fake = generator_out
                 pred_fake = rel2abs(rel_pred_fake, input_data[-1])
 
+                veh_pred_fake, _ = veh_ped_seperate(pred_fake, ids)
+
                 # calc error
             # err_batch += error
     
@@ -46,7 +49,7 @@ def evaluate(args, batch, generator):
 
 
 def discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimizer_d):
-    input_data_list, pred_data_list, num_nodes_list = batch
+    input_data_list, pred_data_list, _, num_nodes_list = batch
     
     loss_batch_d = 0
     loss = torch.zeros(1)
@@ -94,7 +97,7 @@ def discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimiz
 
 
 def generator_step(args, batch, generator, discriminator, g_loss_fn, optimizer_g):
-    input_data_list, pred_data_list, num_nodes_list = batch
+    input_data_list, pred_data_list, _, num_nodes_list = batch
 
     loss_batch_g = 0
     loss = torch.zeros(1)

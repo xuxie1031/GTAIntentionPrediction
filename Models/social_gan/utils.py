@@ -38,6 +38,16 @@ def make_mlp(dim_list, activation='relu', batch_norm=True, dropout=0):
     return nn.Sequential(*layers)
 
 
+def veh_ped_seperate(data_seq, ids, offset=100):
+    veh_seq_ids = (ids < offset).nonzero().squeeze()
+    ped_seq_ids = (ids >= offset).nonzero().squeeze()
+
+    veh_seq = torch.index_select(data_seq, 1, veh_seq_ids)
+    ped_seq = torch.index_select(data_seq, 1, ped_seq_ids)
+
+    return veh_seq, ped_seq
+
+
 def abs2rel(seq):
     rel_seq = torch.zeros_like(seq)
     rel_seq[1:, :, :] = seq[1:, :, :]-seq[:-1, :, :]
@@ -59,7 +69,7 @@ def get_gaussian_noise(shape, use_cuda=True):
         return torch.randn(*shape)
  
 
- def bce_loss(input, target):
+def bce_loss(input, target):
      neg_abs = -input.abs()
      loss = input.clamp(min=0)-input*target+(1+neg_abs.exp()).log()
      return loss.mean()
