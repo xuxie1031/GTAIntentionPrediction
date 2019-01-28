@@ -84,21 +84,30 @@ def exec_model(dataloader_train, dataloader_test, args):
                     if args.use_cuda:
                         input_data = input_data.cuda()
                         pred_data = pred_data.cuda()
+                        ids = ids.cuda()
                     
                     input_data, first_values_dict = data_vectorize(input_data)
                     input_data_nbrs, last_frame_mask = get_conv_mask(input_data[-1], input_data, args.units, num_nodes, args.encoder_dim, args.neighbor_size, args.grid_size)
 
                     output_data = net(input_data, input_data_nbrs, last_frame_mask)
                     ret_data = data_revert(output_data[:, :, :2], first_values_dict)
-                    veh_ret_data = veh_ped_seperate(ret_data, ids)
 
-                    # get err_batch (pred_data, ret_data)
+                    veh_ret_data, _ = veh_ped_seperate(ret_data, ids)
+                    veh_pred_data, _ = veh_ped_seperate(pred_data, ids)
+
+                    error = displacement_error(veh_ret_data, veh_pred_data)
+                    # error = final_displacement_error(veh_ret_data, veh_pred_data)
+
+                    err_batch += error.item()
                 t_end = time.time()
-                loss_batch /= dataloader_test.batch_size
-                loss_epoch += loss_batch
+                err_batch /= dataloader_test.batch_size
+                err_epoch += err_batch
                 num_batch += 1
 
                 print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+            
+            err_epoch /= num_batch
+            print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
 
 
 def main():

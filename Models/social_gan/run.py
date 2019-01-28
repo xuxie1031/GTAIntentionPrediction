@@ -27,12 +27,14 @@ def evaluate(args, batch, generator):
             if args.use_cuda:
                 input_data = input_data.cuda()
                 pred_data = pred_data.cuda()
+                ids = ids.cuda()
             traj_data = torch.cat((input_data, pred_data), dim=0)
             rel_traj_data = abs2rel(traj_data)
 
             rel_input_data = rel_traj_data[:args.obs_len, :, :]
             rel_pred_data = rel_traj_data[args.obs_len:, :, :]
 
+            err_samples = 0
             for _ in range(args.num_samples):
                 generator_out = generator(input_data, rel_input_data, num_nodes)
 
@@ -40,9 +42,16 @@ def evaluate(args, batch, generator):
                 pred_fake = rel2abs(rel_pred_fake, input_data[-1])
 
                 veh_pred_fake, _ = veh_ped_seperate(pred_fake, ids)
+                veh_pred_data, _ = veh_ped_seperate(pred_data, ids)
 
-                # calc error
-            # err_batch += error
+                error = displacement_error(veh_pred_fake, veh_pred_data)
+                # error = final_displacement_error(veh_pred_fake, veh_pred_data)
+                err_samples += error.item()
+            
+            err_samples /= args.num_samples
+            err_batch += err_samples
+        
+        err_batch /= args.batch_size
     
     return err_batch
         
@@ -173,6 +182,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     discriminator = TrajectoryDiscriminator(
         obs_len=args.obs_len,
         pred_len=args.pred_len,
+        input_dim=args.input_dim,
         embedding_dim=args.embedding_dim,
         h_dim=args.encoder_h_dim_d,
         mlp_dim=args.mlp_dim,
@@ -191,7 +201,6 @@ def exec_model(dataloader_train, dataloader_test, args):
 
     for epoch in range(args.num_epochs):
         print('****** Training beginning ******')
-        loss_epoch = 0
         d_steps_left = args.steps_d
         g_steps_left = args.steps_g
 
@@ -221,8 +230,12 @@ def exec_model(dataloader_train, dataloader_test, args):
         num_batch = 0
         for batch in dataloader_test:
             err_batch = evaluate(args, batch, generator)
+            num_batch += 1
+
             print('test epoch {}, batch {}, error batch = {:.6f}'.format(epoch, num_batch, err_batch))
         
+        err_epoch /= dataloader_test.batch_size
+
         d_steps_left = args.steps_d
         g_steps_left = args.steps_g
 
@@ -233,7 +246,7 @@ def main():
     parser.add_argument('--obs_len', type=int, default=8)
     parser.add_argument('--pred_len', type=int, default=12)
     parser.add_argument('--num_worker', type=int, default=4)
-    parser.add_argument('--batch_size' type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--input_dim', type=int, default=2)
     

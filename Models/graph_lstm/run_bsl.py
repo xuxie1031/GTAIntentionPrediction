@@ -116,8 +116,12 @@ def exec_model(dataloader_train, dataloader_test, args):
                     ret_seq = data_revert(ret_seq, first_value_dict)
 
                     veh_ret_seq, _ = veh_ped_seperate(ret_seq, ids)
+                    veh_pred_seq, _ = veh_ped_seperate(pred_data, ids)
 
-                    # get err_batch
+                    error = displacement_error(veh_ret_seq, veh_pred_seq)
+                    # error = final_displacement_error(veh_ret_seq, veh_pred_seq)
+
+                    err_batch += error.item()
 
                 t_end = time.time()
                 err_batch /= dataloader_test.batch_size
@@ -125,6 +129,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 num_batch += 1
 
                 print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+
+            err_epoch /= num_batch
+            print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
 
 
 def main():

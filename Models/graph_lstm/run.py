@@ -124,16 +124,24 @@ def exec_model(dataloader_train, dataloader_test, args):
                     ids = ids.cuda()
                 
                 veh_data, ped_data = veh_ped_seperate(data, ids)
-                veh_input_data, first_values_dict = data_vectorize(veh_data)
+                veh_data, first_values_dict = data_vectorize(veh_data)
+                veh_input_data = veh_data[:args.obs_len, :, :]
+                veh_pred_data = veh_data[args.obs_len:, :, :]
+
                 ped_data, _ = data_vectorize(ped_data)
                 ped_input_data = ped_data[:args.obs_len, :, :]
                 ped_pred_data = ped_data[:args.obs_len, :, :]
 
                 veh_num_nodes, ped_num_nodes = veh_input_data.size(1), ped_input_data.size(1)
                 ret_seq = sample(net, veh_input_data, ped_input_data, ped_pred_data, veh_num_nodes, ped_num_nodes, args)
+                
+                veh_pred_data = data_revert(veh_pred_data, first_values_dict)
                 ret_seq = data_revert(ret_seq, first_values_dict)
 
-                # get err_batch
+                error = displacement_error(ret_seq, veh_pred_data)
+                # error = final_displacement_error(ret_seq, veh_pred_data)
+
+                err_batch += error.item()
             
             t_end = time.time()
             err_batch /= dataloader_test.batch_size
@@ -141,6 +149,9 @@ def exec_model(dataloader_train, dataloader_test, args):
             num_batch += 1
 
             print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+
+        err_epoch /= num_batch
+        print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
 
 
 def main():
