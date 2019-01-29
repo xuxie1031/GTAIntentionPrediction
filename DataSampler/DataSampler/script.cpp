@@ -11,18 +11,21 @@
 #include <utility>
 #include <tuple>
 #include <unordered_map>
+#include <Windows.h>
 
 #include "nlohmann/json.hpp"
+
 using json = nlohmann::json;
 
 #pragma warning(disable : 4244 4305) // double <-> float conversions
 
-Vector3 centerCoords(-1382.03, -390.19, 36.69);
-json curSettings;
+json settings;
+std::string settingFile;
 std::vector<Vehicle> createdVehicles;
 std::vector<Ped> createdPeds;
+std::vector<int> createdPedSequences;
 std::vector<Ped> createdDrivers;
-std::vector<int> createdSequences;
+std::vector<int> createdCarSequences;
 
 
 void printOnScreen(std::string s) {
@@ -32,6 +35,23 @@ void printOnScreen(std::string s) {
 		WAIT(0);
 	}
 	WAIT(0);
+}
+
+std::vector<std::string> readAllFiles(std::string folder)
+{
+	std::vector<std::string> res;
+	std::string path = folder + "\\*";
+	WIN32_FIND_DATA data;
+	HANDLE hFind = ::FindFirstFile(path.c_str(), &data);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+				res.push_back(data.cFileName);
+			}
+		} while (FindNextFile(hFind, &data));
+		FindClose(hFind);
+	}
+	return res;
 }
 
 Entity spawnAtCoords(LPCSTR modelName, int modelType, Vector3 coords, float heading = 0.0)
@@ -93,10 +113,16 @@ Ped spawnDriver(Vehicle vehicle, LPCSTR modelName) {
 }
 
 void deleteAllCreated() {
-	for (int i = createdSequences.size(); i > 0; i--) {
-		int sequence = createdSequences.back();
+	for (int i = createdPedSequences.size(); i > 0; i--) {
+		int sequence = createdCarSequences.back();
 		AI::CLEAR_SEQUENCE_TASK(&sequence);
-		createdSequences.pop_back();
+		createdCarSequences.pop_back();
+	}
+
+	for (int i = createdCarSequences.size(); i > 0; i--) {
+		int sequence = createdCarSequences.back();
+		AI::CLEAR_SEQUENCE_TASK(&sequence);
+		createdCarSequences.pop_back();
 	}
 	for (int i = createdPeds.size(); i > 0; i--) {
 		Entity e = createdPeds[i - 1];
@@ -117,16 +143,28 @@ void deleteAllCreated() {
 
 void deleteCar(int i) {
 	int numCars = createdVehicles.size();
-	AI::CLEAR_SEQUENCE_TASK(&createdSequences[i]);
+	AI::CLEAR_SEQUENCE_TASK(&createdCarSequences[i]);
 	ENTITY::DELETE_ENTITY(&createdDrivers[i]);
 	ENTITY::DELETE_ENTITY(&createdVehicles[i]);
 	std::swap(createdDrivers[i], createdDrivers[numCars - 1]);
 	std::swap(createdVehicles[i], createdVehicles[numCars - 1]);
-	std::swap(createdSequences[i], createdSequences[numCars - 1]);
+	std::swap(createdCarSequences[i], createdCarSequences[numCars - 1]);
 
-	createdSequences.pop_back();
+	createdCarSequences.pop_back();
 	createdDrivers.pop_back();
 	createdVehicles.pop_back();
+}
+
+
+void deletePed(int i) {
+	int numPeds = createdPeds.size();
+	AI::CLEAR_SEQUENCE_TASK(&createdPedSequences[i]);
+	ENTITY::DELETE_ENTITY(&createdPeds[i]);
+	std::swap(createdPeds[i], createdPeds[numPeds - 1]);
+	std::swap(createdPedSequences[i], createdPedSequences[numPeds - 1]);
+
+	createdPedSequences.pop_back();
+	createdPeds.pop_back();
 }
 
 
@@ -141,6 +179,8 @@ int randomNum(int low, int high) {
 float getModelLength(LPCSTR modelName) {
 	Vector3 min, max;
 	Hash model = GAMEPLAY::GET_HASH_KEY((char *)modelName);
+	STREAMING::REQUEST_MODEL(model);
+	while (!STREAMING::HAS_MODEL_LOADED(model)) WAIT(0);
 	GAMEPLAY::GET_MODEL_DIMENSIONS(model, &min, &max);
 	return max.y - min.y;
 }
@@ -150,41 +190,72 @@ void clearArea() {
 	GAMEPLAY::CLEAR_AREA_OF_VEHICLES(0, 0, 0, 10000, false, false, false, false, false);
 }
 
+void getCoords(Entity e, Vector3* coords3D = NULL, Vector2* coords2D = NULL, float* heading = NULL) {
+
+	Vector3 coords = ENTITY::GET_ENTITY_COORDS(e, TRUE);
+
+	if (coords3D != NULL) {
+		*coords3D = coords;
+	}
+
+	if (coords2D != NULL) {
+		GRAPHICS::_WORLD3D_TO_SCREEN2D(coords.x, coords.y, coords.z,
+			&(coords2D->x), &(coords2D->y));
+		int screen_w, screen_h;
+		GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
+		coords2D->x *= screen_w;
+		coords2D->y *= screen_h;
+	}
+
+	if (heading != NULL) {
+		*heading = ENTITY::GET_ENTITY_HEADING(e);
+	}
+
+}
+
 std::string showCoords() {
 	Player e = PLAYER::PLAYER_PED_ID();
-	Vector3 coords3D = ENTITY::GET_ENTITY_COORDS(e, TRUE);
+	Vector3 coords3D;
 	Vector2 coords2D;
+	float heading;
 
-	GRAPHICS::_WORLD3D_TO_SCREEN2D(coords3D.x, coords3D.y, coords3D.z,
-		&(coords2D.x), &(coords2D.y));
-
-	int screen_w, screen_h;
-	GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
-	coords2D.x *= screen_w;
-	coords2D.y *= screen_h;
+	getCoords(e, &coords3D, &coords2D, &heading);
 
 	std::stringstream stream;
 	stream << std::fixed << std::setprecision(2) << coords3D.x
-		<< "," << coords3D.y << "," << coords3D.z << "," << coords2D.x << "," << coords2D.y << "," << ENTITY::GET_ENTITY_HEADING(e);
+		<< "," << coords3D.y << "," << coords3D.z << "," << coords2D.x << "," << coords2D.y << "," << heading;
 	std::string s = stream.str();
 	draw_menu_line(s, 350.0, 15.0, coords2D.y, coords2D.x, 5.0, false, true);
 	return s;
 }
 
+std::string getKeyboardInput() {
+	std::string res;
+	// Invoke keyboard
+	GAMEPLAY::DISPLAY_ONSCREEN_KEYBOARD(true, "", "", "", "", "", "", 140);
+	// Wait for the user to edit
+	while (GAMEPLAY::UPDATE_ONSCREEN_KEYBOARD() == 0) WAIT(0);
+	// Make sure they didn't exit without confirming their change
+	if (!GAMEPLAY::GET_ONSCREEN_KEYBOARD_RESULT()) {
+		return res;
+	}
+	else {
+		return GAMEPLAY::GET_ONSCREEN_KEYBOARD_RESULT();
+	}
+}
+
 void processSampling() {
 	std::ofstream record("sampledCoords.csv");
 	WAIT(200);
+	Menu hintLine("Press 5 to sample a point. Press 0 to exit.", std::vector<std::string>{});
 	while (true) {
 		clearArea();
+		hintLine.drawVertical(0);
 		std::string coords = showCoords();
 		if (IsKeyJustUp(VK_NUMPAD5)) {
-			// Invoke keyboard
-			GAMEPLAY::DISPLAY_ONSCREEN_KEYBOARD(true, "", "", "", "", "", "", 140);
-			// Wait for the user to edit
-			while (GAMEPLAY::UPDATE_ONSCREEN_KEYBOARD() == 0) WAIT(0);
-			// Make sure they didn't exit without confirming their change
-			if (!GAMEPLAY::GET_ONSCREEN_KEYBOARD_RESULT()) continue;
-			record << GAMEPLAY::GET_ONSCREEN_KEYBOARD_RESULT() << ","  << coords << std::endl;
+			std::string label = getKeyboardInput();
+			if (!label.empty())
+				record << label << ","  << coords << std::endl;
 		}
 		if (IsKeyJustUp(VK_NUMPAD0)) {
 			record.close();
@@ -195,7 +266,7 @@ void processSampling() {
 	}
 }
 
-template<class Terminator>
+template<typename Terminator>
 void processRecording(std::vector<std::string> fileName, Terminator terminator, int waitTime) {
 
 	std::unordered_map<Entity, int> IDMap;
@@ -216,14 +287,15 @@ void processRecording(std::vector<std::string> fileName, Terminator terminator, 
 	record.open(dirName + "/" + fileName.back());
 
 	int count = 0;
-	int curID = 0;
+	int carID = 0;
+	int pedID = 100; // constant offset
 	while (true) {
-		std::vector<bool> outOfScreen;
+		bool seeACar = false;
 		for (int i = 0; i < createdVehicles.size(); i++) {
 			Entity e = createdVehicles[i];
 			if (!IDMap.count(e)) {
-				IDMap[e] = curID;
-				curID++;
+				IDMap[e] = carID;
+				carID++;
 			}
 
 			Vector3 curCoords = ENTITY::GET_ENTITY_COORDS(e, !ENTITY::IS_ENTITY_DEAD(e));
@@ -231,198 +303,227 @@ void processRecording(std::vector<std::string> fileName, Terminator terminator, 
 			GRAPHICS::_WORLD3D_TO_SCREEN2D(curCoords.x, curCoords.y, curCoords.z, &(coords2D.x), &(coords2D.y));
 
 			if (coords2D.x < 0) {
-				outOfScreen.push_back(true);
 				continue;
 			}
-			outOfScreen.push_back(false);
+			seeACar = true;
 
 			coords2D.x *= screen_w;
 			coords2D.y *= screen_h;
 
-			record << count << "," << IDMap[e] << "," << coords2D.x << "," << coords2D.y << ",Veh" << std::endl;
+			record << count << "," << IDMap[e] << "," << coords2D.x << "," << coords2D.y << std::endl;
 		}
+		if (seeACar) {
+			for (int i = 0; i < createdPeds.size(); i++) {
+				Entity e = createdPeds[i];
+				if (!IDMap.count(e)) {
+					IDMap[e] = pedID;
+					pedID++;
+				}
+				Vector3 curCoords = ENTITY::GET_ENTITY_COORDS(e, !ENTITY::IS_ENTITY_DEAD(e));
+				Vector2 coords2D;
+				GRAPHICS::_WORLD3D_TO_SCREEN2D(curCoords.x, curCoords.y, curCoords.z, &(coords2D.x), &(coords2D.y));
 
-		for (int i = 0; i < createdPeds.size(); i++) {
-			Entity e = createdPeds[i];
-			if (!IDMap.count(e)) {
-				IDMap[e] = curID;
-				curID++;
+				if (coords2D.x < 0) {
+					continue;
+				}
+
+				coords2D.x *= screen_w;
+				coords2D.y *= screen_h;
+
+				record << count << "," << IDMap[e] << "," << coords2D.x << "," << coords2D.y << std::endl;
+
 			}
-			Vector3 curCoords = ENTITY::GET_ENTITY_COORDS(e, !ENTITY::IS_ENTITY_DEAD(e));
-			Vector2 coords2D;
-			GRAPHICS::_WORLD3D_TO_SCREEN2D(curCoords.x, curCoords.y, curCoords.z, &(coords2D.x), &(coords2D.y));
-
-			if (coords2D.x < 0) {
-				continue;
-			}
-
-			coords2D.x *= screen_w;
-			coords2D.y *= screen_h;
-
-			record << count << "," << IDMap[e] << "," << coords2D.x << "," << coords2D.y << ",Ped" << std::endl;
-
 		}
-
 		if (terminator()) { 
 			break;
 		}
-		count++;
 		WAIT(waitTime);
+		if (!seeACar && count == 0)
+			continue;
+		count++;
 	}
 }
 
 void teleport() {
+
+	if (settings.empty()) {
+		return;
+	}
+
 	Ped p = PLAYER::PLAYER_PED_ID();
-	ENTITY::SET_ENTITY_COORDS(p, centerCoords.x, centerCoords.y, centerCoords.z, 1, 0, 0, 1);
+	ENTITY::SET_ENTITY_COORDS(p, settings["centerCoords"][0], settings["centerCoords"][1], settings["centerCoords"][2], 1, 0, 0, 1);
 }
 
-void complexScene() {
-	int waitTime = 100;
+void setCars() {
 
-	int totalCars = 3;
-	std::vector<std::pair<Vector3, Vector3>> startPositions{ std::make_pair(Vector3(-1420.16,-421.93,36.22), Vector3(-1427.47,-426.17,36.05)),
-															 std::make_pair(Vector3(-1417.19,-426.05,36.14), Vector3(-1425.10,-430.49,36.00))
-	};
-	std::vector<std::vector<Vector3>> validGoals{ { Vector3(-1429.17,-327.34,44.43), Vector3(-1320.46,-361.92,36.75) },
-												  { Vector3(-1320.16,-489.37,33.34), Vector3(-1319.56, -367.42, 36.69)} };
-	float heading = 302.37;
-	float carInterval = 2.0;
-	float stopRange = 2.0;
-	int driveStyle = 786475; // normal except 128--stop on lights
-	float minSpeed = 3.0;
-	float maxSpeed = 10.0;
+	if (settings["totalCars"] == 0) return;
 
-	int numWanderPeds = 6;
-	std::tuple<Vector3, Vector3, Vector3> genArea = std::make_tuple(Vector3(-1362.92, -394.49, 36.55), Vector3(-1387.76, -411.07, 36.56), Vector3(-1378.92, -370.83, 36.51));
+	std::string carModelStr = settings["carModel"].get<std::string>();
+	std::vector<char> carModel(carModelStr.begin(), carModelStr.end());
+	carModel.push_back('\0');
 
-	int numScriptPeds = 3;
-	std::vector<std::vector<Vector3>> endPoints{ { Vector3(-1377.41,-366.81,36.60), Vector3(-1380.84,-366.67,36.57) } , { Vector3(-1409.80,-386.40,36.63), Vector3(-1408.43,-385.78,36.61) }, { Vector3(-1390.06,-415.37,36.58), Vector3(-1385.91,-417.79,36.61) }, { Vector3(-1359.15,-397.74,36.61), Vector3(-1357.56,-393.77,36.58) } };
+	float carLength = getModelLength(&carModel[0]);
 
-	char carModel[] = "Adder";
-	char pedModel[] = "";
+	std::vector<int> numCars(settings["carStartPositions"].size(), 0);
+	for (int i = 0; i < settings["totalCars"]; i++) {
+		int lane = randomNum(0, numCars.size() - 1);
+		numCars[lane]++;
+	}
 
-	auto setCars = [&]() {
+	for (int i = 0; i < settings["carStartPositions"].size(); i++) {
+		Vector3 start;
+		Vector3 front = Vector3(settings["carStartPositions"][i]["front"][0], settings["carStartPositions"][i]["front"][1], settings["carStartPositions"][i]["front"][2]);
+		Vector3 back = Vector3(settings["carStartPositions"][i]["back"][0], settings["carStartPositions"][i]["back"][1], settings["carStartPositions"][i]["back"][2]);
+		start.x = randomNum(front.x, back.x);
+		float ratio = (start.x - front.x) / (back.x - front.x);
+		start.y = (back.y - front.y) * ratio + front.y;
+		start.z = (back.z - front.z) * ratio + front.z;
 
-		float carLength = getModelLength(carModel);
+		ratio = (settings["carInterval"] + carLength) / SYSTEM::VDIST(front.x, front.y, front.z, back.x, back.y, back.z);
 
-		std::vector<int> numCars(startPositions.size(), 0);
-		for (int i = 0; i < totalCars; i++) {
-			int lane = randomNum(0, numCars.size() - 1);
-			numCars[lane]++;
-		}
+		for (int j = 0; j < numCars[i]; j++) {
 
-		for (int i = 0; i < startPositions.size(); i++) {
-			Vector3 start;
-			Vector3 front = startPositions[i].first;
-			Vector3 back = startPositions[i].second;
-			start.x = randomNum(front.x, back.x);
-			float ratio = (start.x - front.x) / (back.x - front.x);
-			start.y = (back.y - front.y) * ratio + front.y;
-			start.z = (back.z - front.z) * ratio + front.z;
+			Vehicle v = spawnAtCoords(&carModel[0], MODEL_VEH, start, settings["carHeading"]);
+			Ped driver = spawnDriver(v, settings["pedModel"].get<std::string>().c_str());
 
-			ratio = (carInterval + carLength) / SYSTEM::VDIST(front.x, front.y, front.z, back.x, back.y, back.z);
+			int goal = randomNum(0, settings["carStartPositions"][i]["goals"].size() - 1);
+			float speed = randomNum((float)settings["carMinSpeed"], settings["carMaxSpeed"]);
 
-			for (int j = 0; j < numCars[i]; j++) {
+			int sequence = 0;
+			AI::OPEN_SEQUENCE_TASK(&sequence);
+			AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, settings["carStartPositions"][i]["goals"][goal][0], settings["carStartPositions"][i]["goals"][goal][1], settings["carStartPositions"][i]["goals"][goal][2], speed, 0, GAMEPLAY::GET_HASH_KEY(&carModel[0]), settings["driveStyle"], settings["carStopRange"], 1.0);
+			AI::CLOSE_SEQUENCE_TASK(sequence);
+			AI::TASK_PERFORM_SEQUENCE(driver, sequence);
 
-				Vehicle v = spawnAtCoords(carModel, MODEL_VEH, start, heading);
-				Ped driver = spawnDriver(v, pedModel);
+			createdCarSequences.push_back(sequence);
 
-				int goal = randomNum(0, validGoals[i].size() - 1);
-				float speed = randomNum(minSpeed, maxSpeed);
-
-				int sequence = 0;
-				AI::OPEN_SEQUENCE_TASK(&sequence);
-				AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, validGoals[i][goal].x, validGoals[i][goal].y, validGoals[i][goal].z, speed, 0, GAMEPLAY::GET_HASH_KEY(carModel), driveStyle, stopRange, 1.0);
-				AI::CLOSE_SEQUENCE_TASK(sequence);
-				AI::TASK_PERFORM_SEQUENCE(driver, sequence);
-
-				createdSequences.push_back(sequence);
-
-				start.x = (back.x - front.x) * ratio + start.x;
-				start.y = (back.y - front.y) * ratio + start.y;
-				start.z = (back.z - front.z) * ratio + start.z;
-				WAIT(0);
-			}
-		}
-	};
-
-	auto setWanderPed = [&]() {
-
-		std::vector<Vector3> pedsPosition;
-
-		Vector3 origin = std::get<0>(genArea);
-		Vector3 unit1 = std::get<1>(genArea);
-		Vector3 unit2 = std::get<2>(genArea);
-
-		float walkRadius = SYSTEM::VDIST(unit1.x, unit1.y, unit1.z, unit2.x, unit2.y, unit2.z) / 2;
-
-		for (int i = 0; i < numWanderPeds; i++) {
-			float ratio1 = randomNum(0.0f, 1.0f);
-			float ratio2 = randomNum(0.0f, 1.0f);
-			float x = ratio1 * (unit1.x - origin.x) + ratio2 * (unit2.x - origin.x) + origin.x;
-			float y = ratio1 * (unit1.y - origin.y) + ratio2 * (unit2.y - origin.y) + origin.y;
-			float z = ratio1 * (unit1.z - origin.z) + ratio2 * (unit2.z - origin.z) + origin.z;
-			bool tooClose = false;
-			for (int j = 0; j < pedsPosition.size(); j++) {
-				if (SYSTEM::VDIST(pedsPosition[j].x, pedsPosition[j].y, pedsPosition[j].z, x, y, z) < 1.0) {
-					tooClose = true;
-					break;
-				}
-			}
-			if (tooClose) {
-				i--;
-				continue;
-			}
-			pedsPosition.push_back(Vector3(x, y, z));
-			Ped p = spawnAtCoords(pedModel, MODEL_PED, pedsPosition.back());
-			AI::TASK_WANDER_IN_AREA(p, centerCoords.x, centerCoords.y, centerCoords.z, walkRadius, 0.0, 0.0);
-			//AI::TASK_WANDER_STANDARD(p, 10.0, 10);
+			start.x = (back.x - front.x) * ratio + start.x;
+			start.y = (back.y - front.y) * ratio + start.y;
+			start.z = (back.z - front.z) * ratio + start.z;
 			WAIT(0);
 		}
-	};
+	}
+}
+
+void setWanderPed() {
+	std::vector<Vector3> pedsPosition;
+
+	if (settings["totalWanderPeds"] == 0) return;
+
+	Vector3 origin = Vector3(settings["wanderPedsGenArea"]["origin"][0], settings["wanderPedsGenArea"]["origin"][1], settings["wanderPedsGenArea"]["origin"][2]);
+	Vector3 unit1 = Vector3(settings["wanderPedsGenArea"]["unit1"][0], settings["wanderPedsGenArea"]["unit1"][1], settings["wanderPedsGenArea"]["unit1"][2]);
+	Vector3 unit2 = Vector3(settings["wanderPedsGenArea"]["unit2"][0], settings["wanderPedsGenArea"]["unit2"][1], settings["wanderPedsGenArea"]["unit2"][2]);
+
+	float walkRadius = SYSTEM::VDIST(unit1.x, unit1.y, unit1.z, unit2.x, unit2.y, unit2.z) * 0.7;
+
+	for (int i = 0; i < settings["totalWanderPeds"]; i++) {
+		float ratio1 = randomNum(0.0f, 1.0f);
+		float ratio2 = randomNum(0.0f, 1.0f);
+		float x = ratio1 * (unit1.x - origin.x) + ratio2 * (unit2.x - origin.x) + origin.x;
+		float y = ratio1 * (unit1.y - origin.y) + ratio2 * (unit2.y - origin.y) + origin.y;
+		float z = ratio1 * (unit1.z - origin.z) + ratio2 * (unit2.z - origin.z) + origin.z;
+		bool tooClose = false;
+		for (int j = 0; j < pedsPosition.size(); j++) {
+			if (SYSTEM::VDIST(pedsPosition[j].x, pedsPosition[j].y, pedsPosition[j].z, x, y, z) < 1.0) {
+				tooClose = true;
+				break;
+			}
+		}
+		if (tooClose) {
+			i--;
+			continue;
+		}
+		pedsPosition.push_back(Vector3(x, y, z));
+		Ped p = spawnAtCoords(settings["pedModel"].get<std::string>().c_str(), MODEL_PED, pedsPosition.back());
+
+
+		int sequence = 0;
+		AI::OPEN_SEQUENCE_TASK(&sequence);
+		AI::TASK_WANDER_IN_AREA(0, settings["centerCoords"][0], settings["centerCoords"][1], settings["centerCoords"][2], walkRadius, 0.0, 0.0);
+		AI::CLOSE_SEQUENCE_TASK(sequence);
+
+		AI::TASK_PERFORM_SEQUENCE(p, sequence);
+		createdPedSequences.push_back(sequence);
+
+		//AI::TASK_WANDER_STANDARD(p, 10.0, 10);
+		WAIT(0);
+	}
+}
+
+void setScriptPed(bool onlyOnce = false) {
+	std::vector<std::pair<Vector3, Vector3>> pedRoutes;
+
+	int totalScriptPeds = onlyOnce ? 1 : settings["totalScriptPeds"];
+
+	for (int i = 0; i < totalScriptPeds; i++) {
+		int startArea = randomNum(0, settings["scriptPedsEndPoints"].size() - 1);
+		int startCode = randomNum(0, settings["scriptPedsEndPoints"][startArea].size() - 1);
+		Vector3 start = Vector3(settings["scriptPedsEndPoints"][startArea][startCode][0], settings["scriptPedsEndPoints"][startArea][startCode][1], settings["scriptPedsEndPoints"][startArea][startCode][2]);
+
+		int endArea = randomNum(0, settings["scriptPedsEndPoints"].size() - 1);
+		if (endArea == startArea) {
+			i--;
+			continue;
+		}
+		int endCode = randomNum(0, settings["scriptPedsEndPoints"][endArea].size() - 1);
+		Vector3 end = Vector3(settings["scriptPedsEndPoints"][endArea][endCode][0], settings["scriptPedsEndPoints"][endArea][endCode][1], settings["scriptPedsEndPoints"][endArea][endCode][2]);
+
+		bool repeated = false;
+		for (int j = 0; j < pedRoutes.size(); j++) {
+			if (start == pedRoutes[j].first || (end == pedRoutes[j].first && start == pedRoutes[j].second)) {
+				repeated = true;
+				break;
+			}
+		}
+
+		if (repeated) {
+			i--;
+			continue;
+		}
+
+		pedRoutes.push_back(std::make_pair(start, end));
+		Ped p = spawnAtCoords(settings["pedModel"].get<std::string>().c_str(), MODEL_PED, start);
+
+		int sequence = 0;
+		AI::OPEN_SEQUENCE_TASK(&sequence);
+		AI::TASK_GO_STRAIGHT_TO_COORD(0, end.x, end.y, end.z, 1.0, 200000, 0.0, 0.2);
+		AI::CLOSE_SEQUENCE_TASK(sequence);
+
+		AI::TASK_PERFORM_SEQUENCE(p, sequence);
+		createdPedSequences.push_back(sequence);
+
+		WAIT(0);
+	}
+}
+
+void startSimulation() {
+
+	if (settings.empty()) {
+		return;
+	}
+
+	DWORD nextTickCount = GetTickCount();
 	
-	auto setScriptPed =  [&]() {
-		std::vector<std::pair<Vector3, Vector3>> pedRoutes;
+	auto terminator = [&]() {
+		clearArea();
 
-		for (int i = 0; i < numScriptPeds; i++) {
-			int startArea = randomNum(0, endPoints.size() - 1);
-			int startCode = randomNum(0, endPoints[startArea].size() - 1);
-			Vector3 start = endPoints[startArea][startCode];
-
-			int endArea = randomNum(0, endPoints.size() - 1);
-			if (endArea == startArea) {
-				i--;
-				continue;
+		if (settings["continuousPedGen"]) {
+			if (GetTickCount() >= nextTickCount) {
+				setScriptPed(true);
+				nextTickCount = GetTickCount() + randomNum((int)settings["minPedGenInterval"], settings["maxPedGenInterval"]);
 			}
-			int endCode = randomNum(0, endPoints[endArea].size() - 1);
-			Vector3 end = endPoints[endArea][endCode];
-
-			bool repeated = false;
-			for (int j = 0; j < pedRoutes.size(); j++) {
-				if (start == pedRoutes[j].first || (end == pedRoutes[j].first && start == pedRoutes[j].second)) {
-					repeated = true;
-					break;
-				}
-			}
-
-			if (repeated) {
-				i--;
-				continue;
-			}
-
-			pedRoutes.push_back(std::make_pair(start, end));
-			Ped p = spawnAtCoords(pedModel, MODEL_PED, start);
-			AI::TASK_GO_STRAIGHT_TO_COORD(p, end.x, end.y, end.z, 1.0, 200000, 0.0, 0.2);
-			WAIT(0);
 		}
 
-	};
-
-	auto terminator = []() {
-		clearArea();
 		for (int i = 0; i < createdVehicles.size(); i++) {
 			if (AI::GET_SEQUENCE_PROGRESS(createdDrivers[i]) == -1) {
 				deleteCar(i);
+				i--;
+			}
+		}
+
+		for (int i = 0; i < createdPeds.size(); i++) {
+			if (AI::GET_SEQUENCE_PROGRESS(createdPeds[i]) == -1) {
+				deletePed(i);
 				i--;
 			}
 		}
@@ -436,13 +537,15 @@ void complexScene() {
 	setCars();
 	setWanderPed();
 	setScriptPed();
-	processRecording({ "complexScene", "record1.csv" }, terminator, waitTime);
+	processRecording(settings["recordDirectory"], terminator, settings["period"]);
 	deleteAllCreated();
 }
 
 void toggleCamera() {
-	int cameraHeight = 15.0;
-	Vector3 cameraRot(270.0, 360.0 - 302.37, 0.0);
+
+	if (settings.empty()) {
+		return;
+	}
 
 	static bool initialized(false);
 	static bool active(false);
@@ -451,10 +554,10 @@ void toggleCamera() {
 
 	if (!initialized) {
 		initialized = true;
-		CAM::SET_CAM_COORD(customCam, centerCoords.x, centerCoords.y, centerCoords.z + cameraHeight);
+		CAM::SET_CAM_COORD(customCam, settings["centerCoords"][0], settings["centerCoords"][1], (float)settings["centerCoords"][2] + settings["cameraHeight"]);
 		CAM::SET_CAM_FOV(customCam, 130.0);
 		// CAM::POINT_CAM_AT_COORD(customCam, centerCoords.x, centerCoords.y, centerCoords.z);
-		CAM::SET_CAM_ROT(customCam, cameraRot.x, cameraRot.y, cameraRot.z, 2);
+		CAM::SET_CAM_ROT(customCam, 270.0, 360.0 - (float)settings["carHeading"], 0.0, 2);
 		CAM::SET_CINEMATIC_MODE_ACTIVE(false);
 	}
 	if (!active) {
@@ -472,42 +575,182 @@ void toggleCamera() {
 // Need new menu
 void loadSettings() {
 	std::ifstream config("settings.json");
-	curSettings << config;
+	config >> settings;
 }
 
+void recordPosition(json& saveSpot, bool appendBack = false, bool getHeading = false) {
+	Menu hintLine("Press 5 to record coords. Press 0 to exit.", std::vector<std::string>{});
+	while (true) {
+		clearArea();
+		hintLine.drawVertical(0);
+		if (IsKeyJustUp(VK_NUMPAD5)) {
+			if (!getHeading) {
+				Vector3 centerCoords;
+				getCoords(PLAYER::PLAYER_PED_ID(), &centerCoords);
+				json coords_j = { centerCoords.x, centerCoords.y, centerCoords.z };
+				if (appendBack == false) {
+					saveSpot = coords_j;
+				}
+				else {
+					saveSpot.push_back(coords_j);
+				}
+			}
+			else {
+				float heading;
+				getCoords(PLAYER::PLAYER_PED_ID(), NULL, NULL, &heading);
+				saveSpot = heading;
+			}
+		}
+		if (IsKeyJustUp(VK_NUMPAD0)) {
+			WAIT(0);
+			break;
+		}
+		WAIT(0);
+	}
+}
+
+Menu createSettingsMenu("Modify Settings", std::vector<std::string>
+{"Save Settings",
+"Center Coords",
+"Add carStartPositions",
+"Clear carStartPositions",
+"car Heading",
+"wanderPedsGenArea",
+"Add scriptPedsEndPoints",
+"Clear scriptPedsEndPoints"
+});
+
 // TODO: Guide through creation
-void createSettings() {
+void modifySettings() {
 
-	json settings;
-	settings["cameraHeight"] = 15.0;
-	settings["centerCoords"] = { -1382.03, -390.19, 36.69 };
-	settings["period"] = 100;
-	settings["totalCars"] = 3;
-	settings["carStartPositions"] = { { { "front", {-1420.16,-421.93,36.22} }, { "back", {-1427.47,-426.17,36.05} } }, { { "front", {-1417.19,-426.05,36.14} }, { "back", {-1425.10,-430.49,36.00} } } };
-	settings["carHeading"] = 302.37;
-	settings["carInterval"] = 2.0;
-	settings["carStopRange"] = 2.0;
-	settings["driveStyle"] = 786475; // normal except 128--stop on lights
-	settings["carMinSpeed"] = 3.0;
-	settings["carMaxSpeed"] = 10.0;
-	settings["totalWanderPeds"] = 6;
-	settings["WanderPedsGenArea"] = { { "origin", {-1362.92, -394.49, 36.55} }, { "unit1", {-1387.76, -411.07, 36.56} }, { "unit2", {-1378.92, -370.83, 36.51} } };
-	settings["totalScriptPeds"] = 3;
-	settings["ScriptPedsEndPoints"] = { { {-1377.41,-366.81,36.60}, {-1380.84,-366.67,36.57} }, { {-1409.80,-386.40,36.63}, {-1408.43,-385.78,36.61} }, { {-1390.06,-415.37,36.58}, {-1385.91,-417.79,36.61} }, { {-1359.15,-397.74,36.61}, {-1357.56,-393.77,36.58} } };
-	settings["carModel"] = "Adder";
-	settings["pedModel"] = "";
+	json settingHolder;
 
-	std::ofstream config("settings.json");
-	config << settings;
-	config.close();
+	if (settings.empty()) {
+		settingHolder["centerCoords"] = { -1382.03, -390.19, 36.69 };
+		settingHolder["carStartPositions"] = { { { "front", {-1420.16,-421.93,36.22} }, { "back", {-1427.47,-426.17,36.05} }, { "goals", { { -1429.17,-327.34,44.43 }, { -1320.46,-361.92,36.75 } } } }, { { "front", {-1417.19,-426.05,36.14} }, { "back", {-1425.10,-430.49,36.00} }, { "goals", { { -1320.16,-489.37,33.34 }, { -1319.56, -367.42, 36.69 } } } } };
+		settingHolder["wanderPedsGenArea"] = { { "origin", {-1362.92, -394.49, 36.55} }, { "unit1", {-1387.76, -411.07, 36.56} }, { "unit2", {-1378.92, -370.83, 36.51} } };
+		settingHolder["scriptPedsEndPoints"] = { { {-1377.41,-366.81,36.60}, {-1380.84,-366.67,36.57} }, { {-1409.80,-386.40,36.63}, {-1408.43,-385.78,36.61} }, { {-1390.06,-415.37,36.58}, {-1385.91,-417.79,36.61} }, { {-1359.15,-397.74,36.61}, {-1357.56,-393.77,36.58} } };
+		settingHolder["recordDirectory"] = json::array({ "complexScene", "record.csv" });
+		settingHolder["cameraHeight"] = 15.0;
+		settingHolder["period"] = 100;
+		settingHolder["totalCars"] = 3;
+		settingHolder["carHeading"] = 302.37;
+		settingHolder["carInterval"] = 2.0;
+		settingHolder["carStopRange"] = 2.0;
+		settingHolder["driveStyle"] = 786475; // normal except 128--stop on lights
+		settingHolder["carMinSpeed"] = 3.0;
+		settingHolder["carMaxSpeed"] = 10.0;
+		settingHolder["totalWanderPeds"] = 6;
+		settingHolder["totalScriptPeds"] = 3;
+		settingHolder["carModel"] = "Adder";
+		settingHolder["pedModel"] = "";
+		settingHolder["continuousPedGen"] = true;
+		settingHolder["minPedGenInterval"] = 2000;
+		settingHolder["maxPedGenInterval"] = 6000;
+	}
+	else {
+		settingHolder = settings;
+	}
+	int lineActive = 0;
+
+	DWORD waitTime = 150;
+
+	while (true) {
+		DWORD maxTickCount = GetTickCount() + waitTime;
+		do
+		{
+			createSettingsMenu.drawVertical(lineActive);
+			WAIT(0);
+		} while (GetTickCount() < maxTickCount);
+
+		waitTime = 0;
+
+		bool bSelect, bBack, bUp, bDown;
+		get_button_state(&bSelect, &bBack, &bUp, &bDown, NULL, NULL);
+		if (bSelect)
+		{
+			switch (lineActive)
+			{
+			case 0: {
+				std::ofstream config("settings.json");
+				config << settingHolder;
+				config.close();
+				settings = settingHolder;
+				break;
+			}
+			case 1: {
+				recordPosition(settingHolder["centerCoords"]);
+				break;
+			}
+			case 2: {
+				json newPosition;
+				printOnScreen("Record front of lane");
+				recordPosition(newPosition["front"]);
+				printOnScreen("Record back of lane");
+				recordPosition(newPosition["back"]);
+				printOnScreen("Record goals of lane.");
+				recordPosition(newPosition["goals"], true);
+				settingHolder["carStartPositions"].push_back(newPosition);
+				break;
+			}
+			case 3: {
+				settingHolder["carStartPositions"] = json();
+				break;
+			}
+			case 4: {
+				recordPosition(settingHolder["carHeading"], false, true);
+				break;
+			}
+			case 5: {
+				printOnScreen("Record center corner of area.");
+				recordPosition(settingHolder["wanderPedsGenArea"]["origin"]);
+				printOnScreen("Record side corner 1 of area.");
+				recordPosition(settingHolder["wanderPedsGenArea"]["unit1"]);
+				printOnScreen("Record side corner 2 of area.");
+				recordPosition(settingHolder["wanderPedsGenArea"]["unit2"]);
+				break;
+			}
+			case 6: {
+				json oneSet;
+				printOnScreen("Record points on one corner of sidewalk.");
+				recordPosition(oneSet, true);
+				if (!oneSet.empty()) {
+					settingHolder["scriptPedsEndPoints"].push_back(oneSet);
+				}
+				break;
+			}
+			case 7: {
+				settingHolder["scriptPedsEndPoints"] = json();
+			}
+			}
+			waitTime = 200;
+		}
+		else if (bBack) {
+			break;
+		}
+		else if (bUp) {
+			if (lineActive == 0)
+				lineActive = createSettingsMenu.lineCount();
+			lineActive--;
+			waitTime = 150;
+		}
+		else if (bDown)
+		{
+			lineActive++;
+			if (lineActive == createSettingsMenu.lineCount())
+				lineActive = 0;
+			waitTime = 150;
+		}
+	}
 }
 
 Menu mainMenu("Main Menu", std::vector<std::string>
 {"Sample Points",
 "Teleport to Scene",
 "Toggle Camera",
-"Complex Scene",
-"Create Settings"});
+"Start Simulation",
+"Modify Settings",
+"Load Settings"});
 
 void processMainMenu() {
 	int lineActive = 0;
@@ -540,10 +783,14 @@ void processMainMenu() {
 				toggleCamera();
 				break;
 			case 3:
-				complexScene();
+				startSimulation();
 				break;
 			case 4:
-				createSettings();
+				modifySettings();
+				break;
+			case 5:
+				loadSettings();
+				break;
 			}
 			waitTime = 200;
 		}
