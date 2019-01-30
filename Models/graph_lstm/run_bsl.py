@@ -5,6 +5,11 @@ import time
 from graph_lstm_bsl import GraphLSTMBSL
 from utils import *
 
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), '..', '..'))
+from DataSet import *
+
 
 def sample(net, input_data, pred_data, num_nodes, args):
     with torch.no_grad():
@@ -154,6 +159,13 @@ def main():
     parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=30)
+
+    args = parser.parse_args()
+
+    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'train'))
+    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'test'))
+
+    exec_model(train_loader, test_loader, args)
 
 
 if __name__ == '__main__':

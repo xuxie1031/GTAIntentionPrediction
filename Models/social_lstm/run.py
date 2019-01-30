@@ -6,10 +6,10 @@ from social_lstm import SocialLSTM
 from grid import *
 from utils import *
 
-# TO DO:
-# 1. dataloader initization
-# 2. loss functions
-# 3. check point
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), '..', '..'))
+from DataSet import *
 
 
 def sample(net, input_data, input_grids, units, num_nodes, args):
@@ -176,7 +176,12 @@ def main():
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=30)
 
-    # initialize dataloader_train
+    args = parser.parse_args()
+
+    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'train'))
+    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'test'))
+
+    exec_model(train_loader, test_loader, args)
 
 
 if __name__ == '__main__':

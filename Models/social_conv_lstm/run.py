@@ -7,6 +7,11 @@ import time
 from social_conv_lstm import SocialConvLSTM
 from utils import *
 
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), '..', '..'))
+from DataSet import *
+
 
 def exec_model(dataloader_train, dataloader_test, args):
     net = SocialConvLSTM(args.obs_len, args.pred_len, args.input_dim, args.output_dim, args.encoder_dim, args.decoder_dim, 
@@ -129,6 +134,13 @@ def main():
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--pretrain_epochs', type=int, default=5)
+
+    args = parser.parse_args()
+
+    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'train'))
+    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'test'))
+
+    exec_model(train_loader, test_loader, args)
 
 
 if __name__ == '__main__':

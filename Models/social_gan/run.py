@@ -7,10 +7,10 @@ import time
 from social_gan import *
 from utils import *
 
-# TO DO:
-# 1. dataloader initialization
-# 2. loss functions
-# 3. check point
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), '..', '..'))
+from DataSet import *
 
 
 def evaluate(args, batch, generator):
@@ -274,6 +274,13 @@ def main():
     parser.add_argument('--num_samples', type=int, default=20)
 
     parser.add_argument('--use_cuda', type=int, default=1)
+
+    args = parser.parse_args()
+
+    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'train'))
+    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'test'))
+
+    exec_model(train_loader, test_loader, args)
 
 
 if __name__ == '__main__':
