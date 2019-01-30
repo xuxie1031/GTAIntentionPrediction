@@ -1,15 +1,17 @@
 #include "Menu.h"
+#include "keyboard.h"
 
 int NUMBER_OF_LINES_SHOW = 15;
 
-std::string line_as_str(std::string text, bool *pState)
+std::string Menu::makeLine(std::string text, bool *pState)
 {
 	while (text.size() < 18) text += " ";
 	return text + (pState ? (*pState ? " [ON]" : " [OFF]") : "");
 }
 
-Menu::Menu(const std::string& caption, const std::vector<std::string>& lines, const std::vector<bool*>& states) {
+Menu::Menu(const std::string& caption, const std::vector<std::string>& lines, const std::vector<std::function<void()>>& functions, const std::vector<bool*>& states) {
 	mCaption = caption;
+	mFunctions = functions;
 	mLines = lines;
 	mMaxWidth = 250;
 	for (int i = 0; i < mLines.size(); i++) {
@@ -46,11 +48,52 @@ void Menu::drawVertical(int lineActive) {
 	draw_menu_line(mCaption, mMaxWidth, 15.0, 18.0, 0.0, 5.0, false, true);
 	for (int i = start; i < end; i++)
 		if (i != lineActive)
-			draw_menu_line(line_as_str(mLines[i], mStates[i]),
+			draw_menu_line(makeLine(mLines[i], mStates[i]),
 				mMaxWidth, 9.0, 60.0 + (i - start) * 36.0, 0.0, 9.0, false, false);
 
-	if (mLines.size() > 0) {
-		draw_menu_line(line_as_str(mLines[lineActive], mStates[lineActive]),
+	if (lineCount() > 0) {
+		draw_menu_line(makeLine(mLines[lineActive], mStates[lineActive]),
 			mMaxWidth + 1.0, 11.0, 56.0 + (lineActive - start) * 36.0, 0.0, 7.0, true, false);
+	}
+}
+
+void Menu::processMenu() {
+	int lineActive = 0;
+
+	DWORD waitTime = 150;
+
+	while (true) {
+		DWORD maxTickCount = GetTickCount() + waitTime;
+		do
+		{
+			drawVertical(lineActive);
+			WAIT(0);
+		} while (GetTickCount() < maxTickCount);
+
+		waitTime = 0;
+
+		bool bSelect, bBack, bUp, bDown;
+		get_button_state(&bSelect, &bBack, &bUp, &bDown, NULL, NULL);
+		if (bSelect)
+		{
+			mFunctions[lineActive]();
+			waitTime = 200;
+		}
+		else if (bBack) {
+			break;
+		}
+		else if (bUp) {
+			if (lineActive == 0)
+				lineActive = lineCount();
+			lineActive--;
+			waitTime = 150;
+		}
+		else if (bDown)
+		{
+			lineActive++;
+			if (lineActive == lineCount())
+				lineActive = 0;
+			waitTime = 150;
+		}
 	}
 }

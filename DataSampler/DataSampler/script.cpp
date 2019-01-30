@@ -12,6 +12,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <Windows.h>
+#include <functional>
 
 #include "nlohmann/json.hpp"
 
@@ -42,7 +43,7 @@ std::vector<std::string> readAllFiles(std::string folder)
 	std::vector<std::string> res;
 	std::string path = folder + "\\*";
 	WIN32_FIND_DATA data;
-	HANDLE hFind = ::FindFirstFile(path.c_str(), &data);
+	HANDLE hFind = FindFirstFile(path.c_str(), &data);
 	if (hFind != INVALID_HANDLE_VALUE) {
 		do {
 			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -247,14 +248,14 @@ std::string getKeyboardInput() {
 void processSampling() {
 	std::ofstream record("sampledCoords.csv");
 	WAIT(200);
-	Menu hintLine("Press 5 to sample a point. Press 0 to exit.", std::vector<std::string>{});
+	Menu hintLine("Press 5 to sample a point. Press 0 to exit.", {}, {});
 	while (true) {
 		clearArea();
 		hintLine.drawVertical(0);
 		std::string coords = showCoords();
 		if (IsKeyJustUp(VK_NUMPAD5)) {
 			std::string label = getKeyboardInput();
-			if (!label.empty())
+			if (label != "")
 				record << label << ","  << coords << std::endl;
 		}
 		if (IsKeyJustUp(VK_NUMPAD0)) {
@@ -266,8 +267,7 @@ void processSampling() {
 	}
 }
 
-template<typename Terminator>
-void processRecording(std::vector<std::string> fileName, Terminator terminator, int waitTime) {
+void processRecording(std::vector<std::string> fileName, std::function<bool()> terminator, int waitTime) {
 
 	std::unordered_map<Entity, int> IDMap;
 
@@ -358,11 +358,7 @@ void setCars() {
 
 	if (settings["totalCars"] == 0) return;
 
-	std::string carModelStr = settings["carModel"].get<std::string>();
-	std::vector<char> carModel(carModelStr.begin(), carModelStr.end());
-	carModel.push_back('\0');
-
-	float carLength = getModelLength(&carModel[0]);
+	float carLength = getModelLength(settings["carModel"].get<std::string>().c_str());
 
 	std::vector<int> numCars(settings["carStartPositions"].size(), 0);
 	for (int i = 0; i < settings["totalCars"]; i++) {
@@ -383,7 +379,7 @@ void setCars() {
 
 		for (int j = 0; j < numCars[i]; j++) {
 
-			Vehicle v = spawnAtCoords(&carModel[0], MODEL_VEH, start, settings["carHeading"]);
+			Vehicle v = spawnAtCoords(settings["carModel"].get<std::string>().c_str(), MODEL_VEH, start, settings["carHeading"]);
 			Ped driver = spawnDriver(v, settings["pedModel"].get<std::string>().c_str());
 
 			int goal = randomNum(0, settings["carStartPositions"][i]["goals"].size() - 1);
@@ -391,7 +387,7 @@ void setCars() {
 
 			int sequence = 0;
 			AI::OPEN_SEQUENCE_TASK(&sequence);
-			AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, settings["carStartPositions"][i]["goals"][goal][0], settings["carStartPositions"][i]["goals"][goal][1], settings["carStartPositions"][i]["goals"][goal][2], speed, 0, GAMEPLAY::GET_HASH_KEY(&carModel[0]), settings["driveStyle"], settings["carStopRange"], 1.0);
+			AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, settings["carStartPositions"][i]["goals"][goal][0], settings["carStartPositions"][i]["goals"][goal][1], settings["carStartPositions"][i]["goals"][goal][2], speed, 0, GAMEPLAY::GET_HASH_KEY((char *)(settings["carModel"].get<std::string>().c_str())), settings["driveStyle"], settings["carStopRange"], 1.0);
 			AI::CLOSE_SEQUENCE_TASK(sequence);
 			AI::TASK_PERFORM_SEQUENCE(driver, sequence);
 
@@ -575,11 +571,37 @@ void toggleCamera() {
 // Need new menu
 void loadSettings() {
 	std::ifstream config("settings.json");
-	config >> settings;
+	if (config.is_open()) {
+		config >> settings;
+	}
+	else {
+		settings["centerCoords"] = { -1382.03, -390.19, 36.69 };
+		settings["carStartPositions"] = { { { "front", {-1420.16,-421.93,36.22} }, { "back", {-1427.47,-426.17,36.05} }, { "goals", { { -1429.17,-327.34,44.43 }, { -1320.46,-361.92,36.75 } } } }, { { "front", {-1417.19,-426.05,36.14} }, { "back", {-1425.10,-430.49,36.00} }, { "goals", { { -1320.16,-489.37,33.34 }, { -1319.56, -367.42, 36.69 } } } } };
+		settings["wanderPedsGenArea"] = { { "origin", {-1362.92, -394.49, 36.55} }, { "unit1", {-1387.76, -411.07, 36.56} }, { "unit2", {-1378.92, -370.83, 36.51} } };
+		settings["scriptPedsEndPoints"] = { { {-1377.41,-366.81,36.60}, {-1380.84,-366.67,36.57} }, { {-1409.80,-386.40,36.63}, {-1408.43,-385.78,36.61} }, { {-1390.06,-415.37,36.58}, {-1385.91,-417.79,36.61} }, { {-1359.15,-397.74,36.61}, {-1357.56,-393.77,36.58} } };
+		settings["recordDirectory"] = json::array({ "complexScene", "record.csv" });
+		settings["cameraHeight"] = 15.0;
+		settings["period"] = 100;
+		settings["totalCars"] = 3;
+		settings["carHeading"] = 302.37;
+		settings["carInterval"] = 2.0;
+		settings["carStopRange"] = 2.0;
+		settings["driveStyle"] = 786475; // normal except 128--stop on lights
+		settings["carMinSpeed"] = 3.0;
+		settings["carMaxSpeed"] = 10.0;
+		settings["totalWanderPeds"] = 6;
+		settings["totalScriptPeds"] = 3;
+		settings["carModel"] = "Adder";
+		settings["pedModel"] = "";
+		settings["continuousPedGen"] = true;
+		settings["minPedGenInterval"] = 2000;
+		settings["maxPedGenInterval"] = 6000;
+	}
 }
 
 void recordPosition(json& saveSpot, bool appendBack = false, bool getHeading = false) {
-	Menu hintLine("Press 5 to record coords. Press 0 to exit.", std::vector<std::string>{});
+	Menu hintLine("Press 5 to record coords. Press 0 to exit.", {}, {});
+	Menu SuccessMessage("Point recorded", {}, {});
 	while (true) {
 		clearArea();
 		hintLine.drawVertical(0);
@@ -609,216 +631,109 @@ void recordPosition(json& saveSpot, bool appendBack = false, bool getHeading = f
 	}
 }
 
-Menu createSettingsMenu("Modify Settings", std::vector<std::string>
-{"Save Settings",
-"Center Coords",
-"Add carStartPositions",
-"Clear carStartPositions",
-"car Heading",
-"wanderPedsGenArea",
-"Add scriptPedsEndPoints",
-"Clear scriptPedsEndPoints"
-});
+void saveSettings() {
+	std::ofstream config("settings.json");
+	config << settings;
+	config.close();
+}
 
-// TODO: Guide through creation
-void modifySettings() {
+void setCenterCoords() {
+	recordPosition(settings["centerCoords"]);
+}
 
-	json settingHolder;
+void addCarStartPosition() {
+	json newPosition;
+	printOnScreen("Record front of lane");
+	recordPosition(newPosition["front"]);
+	printOnScreen("Record back of lane");
+	recordPosition(newPosition["back"]);
+	printOnScreen("Record goals of lane.");
+	recordPosition(newPosition["goals"], true);
+	settings["carStartPositions"].push_back(newPosition);
+}
 
-	if (settings.empty()) {
-		settingHolder["centerCoords"] = { -1382.03, -390.19, 36.69 };
-		settingHolder["carStartPositions"] = { { { "front", {-1420.16,-421.93,36.22} }, { "back", {-1427.47,-426.17,36.05} }, { "goals", { { -1429.17,-327.34,44.43 }, { -1320.46,-361.92,36.75 } } } }, { { "front", {-1417.19,-426.05,36.14} }, { "back", {-1425.10,-430.49,36.00} }, { "goals", { { -1320.16,-489.37,33.34 }, { -1319.56, -367.42, 36.69 } } } } };
-		settingHolder["wanderPedsGenArea"] = { { "origin", {-1362.92, -394.49, 36.55} }, { "unit1", {-1387.76, -411.07, 36.56} }, { "unit2", {-1378.92, -370.83, 36.51} } };
-		settingHolder["scriptPedsEndPoints"] = { { {-1377.41,-366.81,36.60}, {-1380.84,-366.67,36.57} }, { {-1409.80,-386.40,36.63}, {-1408.43,-385.78,36.61} }, { {-1390.06,-415.37,36.58}, {-1385.91,-417.79,36.61} }, { {-1359.15,-397.74,36.61}, {-1357.56,-393.77,36.58} } };
-		settingHolder["recordDirectory"] = json::array({ "complexScene", "record.csv" });
-		settingHolder["cameraHeight"] = 15.0;
-		settingHolder["period"] = 100;
-		settingHolder["totalCars"] = 3;
-		settingHolder["carHeading"] = 302.37;
-		settingHolder["carInterval"] = 2.0;
-		settingHolder["carStopRange"] = 2.0;
-		settingHolder["driveStyle"] = 786475; // normal except 128--stop on lights
-		settingHolder["carMinSpeed"] = 3.0;
-		settingHolder["carMaxSpeed"] = 10.0;
-		settingHolder["totalWanderPeds"] = 6;
-		settingHolder["totalScriptPeds"] = 3;
-		settingHolder["carModel"] = "Adder";
-		settingHolder["pedModel"] = "";
-		settingHolder["continuousPedGen"] = true;
-		settingHolder["minPedGenInterval"] = 2000;
-		settingHolder["maxPedGenInterval"] = 6000;
-	}
-	else {
-		settingHolder = settings;
-	}
-	int lineActive = 0;
+void clearCarStartPositions() {
+	settings["carStartPositions"] = json();
+}
 
-	DWORD waitTime = 150;
+void setCarHeading() {
+	recordPosition(settings["carHeading"], false, true);
+}
 
-	while (true) {
-		DWORD maxTickCount = GetTickCount() + waitTime;
-		do
-		{
-			createSettingsMenu.drawVertical(lineActive);
-			WAIT(0);
-		} while (GetTickCount() < maxTickCount);
+void setWanderPedsGenArea() {
+	printOnScreen("Record center corner of area.");
+	recordPosition(settings["wanderPedsGenArea"]["origin"]);
+	printOnScreen("Record side corner 1 of area.");
+	recordPosition(settings["wanderPedsGenArea"]["unit1"]);
+	printOnScreen("Record side corner 2 of area.");
+	recordPosition(settings["wanderPedsGenArea"]["unit2"]);
+}
 
-		waitTime = 0;
-
-		bool bSelect, bBack, bUp, bDown;
-		get_button_state(&bSelect, &bBack, &bUp, &bDown, NULL, NULL);
-		if (bSelect)
-		{
-			switch (lineActive)
-			{
-			case 0: {
-				std::ofstream config("settings.json");
-				config << settingHolder;
-				config.close();
-				settings = settingHolder;
-				break;
-			}
-			case 1: {
-				recordPosition(settingHolder["centerCoords"]);
-				break;
-			}
-			case 2: {
-				json newPosition;
-				printOnScreen("Record front of lane");
-				recordPosition(newPosition["front"]);
-				printOnScreen("Record back of lane");
-				recordPosition(newPosition["back"]);
-				printOnScreen("Record goals of lane.");
-				recordPosition(newPosition["goals"], true);
-				settingHolder["carStartPositions"].push_back(newPosition);
-				break;
-			}
-			case 3: {
-				settingHolder["carStartPositions"] = json();
-				break;
-			}
-			case 4: {
-				recordPosition(settingHolder["carHeading"], false, true);
-				break;
-			}
-			case 5: {
-				printOnScreen("Record center corner of area.");
-				recordPosition(settingHolder["wanderPedsGenArea"]["origin"]);
-				printOnScreen("Record side corner 1 of area.");
-				recordPosition(settingHolder["wanderPedsGenArea"]["unit1"]);
-				printOnScreen("Record side corner 2 of area.");
-				recordPosition(settingHolder["wanderPedsGenArea"]["unit2"]);
-				break;
-			}
-			case 6: {
-				json oneSet;
-				printOnScreen("Record points on one corner of sidewalk.");
-				recordPosition(oneSet, true);
-				if (!oneSet.empty()) {
-					settingHolder["scriptPedsEndPoints"].push_back(oneSet);
-				}
-				break;
-			}
-			case 7: {
-				settingHolder["scriptPedsEndPoints"] = json();
-			}
-			}
-			waitTime = 200;
-		}
-		else if (bBack) {
-			break;
-		}
-		else if (bUp) {
-			if (lineActive == 0)
-				lineActive = createSettingsMenu.lineCount();
-			lineActive--;
-			waitTime = 150;
-		}
-		else if (bDown)
-		{
-			lineActive++;
-			if (lineActive == createSettingsMenu.lineCount())
-				lineActive = 0;
-			waitTime = 150;
-		}
+void addScriptPedsEndPoints() {
+	json oneSet;
+	printOnScreen("Record points on one corner of sidewalk.");
+	recordPosition(oneSet, true);
+	if (!oneSet.empty()) {
+		settings["scriptPedsEndPoints"].push_back(oneSet);
 	}
 }
 
-Menu mainMenu("Main Menu", std::vector<std::string>
-{"Sample Points",
-"Teleport to Scene",
-"Toggle Camera",
-"Start Simulation",
-"Modify Settings",
-"Load Settings"});
+void clearScriptPedsEndPoints() {
+	settings["scriptPedsEndPoints"] = json();
+}
 
-void processMainMenu() {
-	int lineActive = 0;
+void modifySettings() {
 
-	DWORD waitTime = 150;
+	Menu createSettingsMenu("Modify Settings",
+		{	"Save Settings to File",
+			"Center Coords",
+			"Add carStartPosition",
+			"Clear carStartPositions",
+			"Car Heading at Spawn",
+			"wanderPedsGenArea",
+			"Add One Set of scriptPedsEndPoints",
+			"Clear scriptPedsEndPoints"
+		},
+	{	saveSettings,
+		setCenterCoords,
+		addCarStartPosition,
+		clearCarStartPositions,
+		setCarHeading,
+		setWanderPedsGenArea,
+		addScriptPedsEndPoints,
+		clearScriptPedsEndPoints
+	});
 
-	while (true) {
-		DWORD maxTickCount = GetTickCount() + waitTime;
-		do
-		{
-			mainMenu.drawVertical(lineActive);
-			WAIT(0);
-		} while (GetTickCount() < maxTickCount);
-
-		waitTime = 0;
-
-		bool bSelect, bBack, bUp, bDown;
-		get_button_state(&bSelect, &bBack, &bUp, &bDown, NULL, NULL);
-		if (bSelect)
-		{
-			switch (lineActive)
-			{
-			case 0:
-				processSampling();
-				break;
-			case 1:
-				teleport();
-				break;
-			case 2:
-				toggleCamera();
-				break;
-			case 3:
-				startSimulation();
-				break;
-			case 4:
-				modifySettings();
-				break;
-			case 5:
-				loadSettings();
-				break;
-			}
-			waitTime = 200;
-		}
-		else if (bBack) {
-			break;
-		}
-		else if (bUp) {
-			if (lineActive == 0)
-				lineActive = mainMenu.lineCount();
-			lineActive--;
-			waitTime = 150;
-		}
-		else if (bDown)
-		{
-			lineActive++;
-			if (lineActive == mainMenu.lineCount())
-				lineActive = 0;
-			waitTime = 150;
-		}
+	if (settings.empty()) {
+		loadSettings();
 	}
+
+	createSettingsMenu.processMenu();
 }
 
 
 void main() {
+
+	Menu mainMenu("Main Menu",
+		{	"Sample Points",
+			"Teleport to Scene",
+			"Toggle Camera", 
+			"Start Simulation",
+			"Modify Settings", 
+			"Load Settings"
+		},
+		{	processSampling,
+			teleport,
+			toggleCamera,
+			startSimulation,
+			modifySettings,
+			loadSettings
+		});
+
 	while (true) {
 		if (IsKeyJustUp(VK_F6)) {
 			AUDIO::PLAY_SOUND_FRONTEND(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", 0);
-			processMainMenu();
+			mainMenu.processMenu();
 		}
 		WAIT(0);
 	}
