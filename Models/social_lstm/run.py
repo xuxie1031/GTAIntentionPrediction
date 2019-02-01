@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.getcwd(), '..', '..'))
 from DataSet import *
 
 
-def sample(net, input_data, input_grids, units, num_nodes, args):
+def sample(net, input_data, input_grids, num_nodes, args, units=(1.0, 1.0)):
     with torch.no_grad():
         hidden_states = torch.zeros(num_nodes, net.hidden_size)
         if args.use_cuda:
@@ -40,7 +40,7 @@ def sample(net, input_data, input_grids, units, num_nodes, args):
             output_data[tstep, :, 1] = next_y
 
             curr_data = output_data[tstep]
-            curr_grid = get_grid_mask(curr_data, units, num_nodes, args.neighbor_size, args.grid_size)
+            curr_grid = get_grid_mask(curr_data, num_nodes, args.neighbor_size, args.grid_size)
             curr_grid = torch.from_numpy(curr_grid).float()
             if args.use_cuda:
                 curr_grid = curr_grid.cuda()
@@ -78,7 +78,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 # raw data process
                 if args.use_cuda:
                     input_data = input_data.cuda()
-                grids = get_grid_mask_seq(input_data, dataloader_train.units, args.neighbor_size, args.grid_size, args.use_cuda)
+                grids = get_grid_mask_seq(input_data, args.neighbor_size, args.grid_size, args.use_cuda)
                 input_data, _ = data_vectorize(input_data)
 
                 hidden_states = torch.zeros(num_nodes, args.hidden_size)
@@ -92,7 +92,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 net.zero_grad()
                 optimizer.zero_grad()
 
-                outputs, _, _ = net(input_data, grids, hidden_states, cell_states, args.obs_len, num_nodes)
+                outputs, _, _ = net(input_data, grids, hidden_states, cell_states, args.obs_len+args.pred_len, num_nodes)
                 
                 loss = gaussian_likelihood_2d(outputs, input_data)
                 loss_batch += loss.item()
@@ -131,10 +131,10 @@ def exec_model(dataloader_train, dataloader_test, args):
                     input_data = input_data.cuda()
                     pred_data = pred_data.cuda()
                     ids = ids.cuda()
-                grids = get_grid_mask_seq(input_data, dataloader_test.units, args.neighbor_size, args.grid_size, args.use_cuda)
+                grids = get_grid_mask_seq(input_data, args.neighbor_size, args.grid_size, args.use_cuda)
                 input_data, first_values_dict = data_vectorize(input_data)
 
-                ret_seq = sample(net, input_data, grids, dataloader_test.units, num_nodes, args)
+                ret_seq = sample(net, input_data, grids, num_nodes, args)
                 ret_seq = data_revert(ret_seq, first_values_dict)
 
                 veh_ret_seq, _ = veh_ped_seperate(ret_seq, ids)
@@ -159,6 +159,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--num_worker', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--input_size', type=int, default=2)
     parser.add_argument('--output_size', type=int, default=5)
     parser.add_argument('--embedding_size', type=int, default=64)

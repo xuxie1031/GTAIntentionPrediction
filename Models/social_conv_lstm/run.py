@@ -29,7 +29,7 @@ def exec_model(dataloader_train, dataloader_test, args):
             input_data_list, pred_data_list, _, num_nodes_list = batch
 
             loss_batch = 0
-            for idx in range(dataloader_train.batch_size):
+            for idx in range(args.batch_size):
                 input_data = input_data_list[idx]
                 pred_data = pred_data_list[idx]
                 num_nodes = num_nodes_list[idx]
@@ -42,7 +42,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 data, _ = data_vectorize(data)
                 input_data, pred_data = data[:args.obs_len, :, :], data[args.obs_len:, :, :]
 
-                input_data_nbrs, last_frame_mask = get_conv_mask(input_data[-1], input_data, args.units, num_nodes, args.encoder_dim, args.neighbor_size, args.grid_size)
+                input_data_nbrs, last_frame_mask = get_conv_mask(input_data[-1], input_data, num_nodes, args.encoder_dim, args.neighbor_size, args.grid_size, use_cuda=args.use_cuda)
                 if args.use_cuda:
                     # input_data_nbrs = input_data_nbrs.cuda()
                     last_frame_mask = last_frame_mask.cuda()
@@ -61,7 +61,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 optimizer.step()
             
             t_end = time.time()
-            loss_batch /= dataloader_train.batch_size
+            loss_batch /= args.batch_size
             loss_epoch += loss_batch
             num_batch += 1
 
@@ -80,7 +80,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 input_data_list, pred_data_list, ids_list, num_nodes_list = batch
 
                 err_batch = 0.0
-                for idx in range(dataloader_test.batch_size):
+                for idx in range(args.batch_size):
                     input_data = input_data_list[idx]
                     pred_data = pred_data_list[idx]
                     ids = ids_list[idx]
@@ -105,7 +105,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                     err_batch += error.item()
                 t_end = time.time()
-                err_batch /= dataloader_test.batch_size
+                err_batch /= args.batch_size
                 err_epoch += err_batch
                 num_batch += 1
 
@@ -119,6 +119,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--num_worker', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--output_dim', type=int, default=5)
     parser.add_argument('--input_embedding_dim', type=int, default=32)

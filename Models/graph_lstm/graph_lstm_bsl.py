@@ -90,7 +90,8 @@ class GraphLSTMBSL(nn.Module):
             else:
                 cell_state_tuple = (curr_cell_h, )
             
-            ouputs[i*num_nodes+torch.tensor(range(num_nodes)).long()]  =self.output_layer(curr_cell_h)
+            outputs[framenum*num_nodes:(framenum+1)*num_nodes] = self.output_layer(curr_cell_h)
+            
 
-        ouputs = outputs.view(seq_len, num_nodes, self.output_size)
+        outputs = outputs.view(seq_len, num_nodes, self.output_size)
         return outputs, cell_state_tuple, graph_state_tuple

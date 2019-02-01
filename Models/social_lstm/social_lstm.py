@@ -55,10 +55,10 @@ class SocialLSTM(nn.Module):
         if self.use_cuda:
             outputs = outputs.cuda()
 
-        for framenum, frame in input_data:
-            nodes_current = frame
+        for framenum in range(len(input_data)):
+            nodes_current = input_data[framenum]
             grid_current = grids[framenum]
-            
+
             social_tensor = self.getSocialTensor(grid_current, hidden_states)
             input_embedding = self.dropout(self.relu(self.input_embedding_layer(nodes_current)))
             social_embedding = self.dropout(self.relu(self.tensor_embedding_layer(social_tensor)))
@@ -69,7 +69,7 @@ class SocialLSTM(nn.Module):
             else:
                 hidden_states = self.cell(concat_embedding, hidden_states)
             
-            outputs[framenum*num_nodes+torch.tensor(range(num_nodes)).long()] = self.output_layer(hidden_states)
+            outputs[framenum*num_nodes:(framenum+1)*num_nodes] = self.output_layer(hidden_states)
         
         outputs = outputs.view(seq_len, num_nodes, self.output_size)
         return outputs, hidden_states, cell_states

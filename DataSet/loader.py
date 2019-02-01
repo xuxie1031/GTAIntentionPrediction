@@ -1,5 +1,5 @@
 from torch.utils.data import DataLoader
-from trajectories import TrajectoryDataset
+from trajectories import TrajectoryDataset, seq_collate
 
 def data_loader(args, path):
     dset = TrajectoryDataset(
@@ -12,7 +12,8 @@ def data_loader(args, path):
         dset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=args.num_workers
+        num_workers=args.num_worker,
+        collate_fn=seq_collate
     )
 
     return dset, loader

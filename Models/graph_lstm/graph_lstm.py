@@ -127,7 +127,7 @@ class GraphLSTM(nn.Module):
             else:
                 cell_state_tuple = (curr_cell_h, )
             
-            outputs[i*num_nodes+torch.tensor(range(num_nodes)).long()] = self.output_layer(curr_cell_h)
+            outputs[framenum*num_nodes:(framenum+1)*num_nodes] = self.output_layer(curr_cell_h)
         
         outputs = outputs.view(seq_len, num_nodes, self.output_size)
         return outputs, cell_state_tuple, graph_veh_state_tuple, graph_ped_state_tuple

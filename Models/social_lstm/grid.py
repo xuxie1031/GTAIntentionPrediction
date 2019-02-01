@@ -1,12 +1,12 @@
-import numppy as np
+import numpy as np
 import torch
 import itertools
 
 
-def get_grid_mask(frame, units, num_nodes, neighbor_size, grid_size):
+def get_grid_mask(frame, num_nodes, neighbor_size, grid_size, units=(1.0, 1.0)):
     width_unit, height_unit = units[0], units[1]
     frame_mask = np.zeros((num_nodes, num_nodes, grid_size**2))
-    frame_np = frame.data.numpy()
+    frame_np = frame.cpu().numpy()
 
     width_bound, height_bound = neighbor_size/(width_unit*1.0)*2, neighbor_size/(height_unit*1.0)*2
 
@@ -34,10 +34,10 @@ def get_grid_mask(frame, units, num_nodes, neighbor_size, grid_size):
     return frame_mask
 
 
-def get_grid_mask_seq(frames, units, neighbor_size, grid_size, use_cuda):
+def get_grid_mask_seq(frames, neighbor_size, grid_size, use_cuda, units=(1.0, 1.0)):
     mask_seq = []
     for i in range(len(frames)):
-        mask = torch.from_numpy(get_grid_mask(frames[i], units, len(frames[i]), neighbor_size, grid_size))
+        mask = torch.from_numpy(get_grid_mask(frames[i], len(frames[i]), neighbor_size, grid_size, units)).float()
         if use_cuda:
             mask = mask.cuda()
         mask_seq.append(mask)

@@ -60,7 +60,7 @@ def exec_model(dataloader_train, dataloader_test, args):
             input_data_list, pred_data_list, _, num_nodes_list = batch
 
             loss_batch = 0
-            for idx in range(dataloader_train.batch_size):
+            for idx in range(args.batch_size):
                 input_data = input_data_list[idx]
                 pred_data = pred_data_list[idx]
                 num_nodes = num_nodes_list[idx]
@@ -90,7 +90,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 optimizer.step()
 
             t_end = time.time()
-            loss_batch /= dataloader_train.batch_size
+            loss_batch /= args.batch_size
             loss_epoch += loss_batch
             num_batch += 1
 
@@ -105,7 +105,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 input_data_list, pred_data_list, ids_list, num_nodes_list = batch
 
                 err_batch = 0.0
-                for idx in range(dataloader_test.batch_size):
+                for idx in range(args.batch_size):
                     input_data = input_data_list[idx]
                     pred_data = pred_data_list[idx]
                     ids = ids_list[idx]
@@ -129,7 +129,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                     err_batch += error.item()
 
                 t_end = time.time()
-                err_batch /= dataloader_test.batch_size
+                err_batch /= args.batch_size
                 err_epoch += err_batch
                 num_batch += 1
 

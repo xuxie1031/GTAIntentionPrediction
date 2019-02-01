@@ -44,7 +44,7 @@ def veh_ped_seperate(data_seq, ids, offset=100):
     return veh_seq, ped_seq
 
 
-def get_conv_mask(last_frame, frames, units, num_nodes, encoder_dim, neighbor_size, grid_size):
+def get_conv_mask(last_frame, frames, num_nodes, encoder_dim, neighbor_size, grid_size, units=(1.0, 1.0), use_cuda=True):
     width_unit, height_unit = units[0], units[1]
     last_frame_mask = np.zeros((num_nodes, width_unit, height_unit, encoder_dim))
     last_frame_np = last_frame.data.numpy()
@@ -78,7 +78,11 @@ def get_conv_mask(last_frame, frames, units, num_nodes, encoder_dim, neighbor_si
             last_frame_mask[curr_idx, cell_x, cell_y, :] = 1.0
         
         other_grid2lookup = collections.OrderedDict(sorted(other_grid2lookup.items()))
-        frames_nbr = torch.index_select(frames_permuted, 0, torch.tensor(list(other_grid2lookup.values())).long())
+        other_grid2lookup_idx = torch.tensor(list(other_grid2lookup.values())).long()
+        if use_cuda:
+            other_grid2lookup_idx = other_grid2lookup_idx.cuda()
+
+        frames_nbr = torch.index_select(frames_permuted, 0, other_grid2lookup_idx)
         frames_nbrs.append(frames_nbr)
     
     frames_nbrs = torch.cat(frames_nbrs, dim=0).permute(1, 0, 2)

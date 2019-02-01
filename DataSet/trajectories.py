@@ -4,6 +4,13 @@ from torch.utils.data import Dataset
 import numpy as np
 import os
 
+
+def seq_collate(data):
+    (obs_seq_list, pred_seq_list, ids_list, num_nodes_list) = zip(*data)
+
+    return (obs_seq_list, pred_seq_list, ids_list, num_nodes_list)
+
+
 def read_file(path, delim=','):
     data  = []
     with open(path, 'r') as f:
