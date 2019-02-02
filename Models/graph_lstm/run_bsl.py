@@ -25,7 +25,7 @@ def sample(net, input_data, pred_data, num_nodes, args):
         
         for tstep in range(args.obs_len):
             output_obs, cell_hidden_state_tuple, graph_hidden_state_tuple = \
-                net([input_data[tstep]], cell_hidden_state_tuple, graph_hidden_state_tuple)
+                net([input_data[tstep]], cell_hidden_state_tuple, graph_hidden_state_tuple, 1, num_nodes)
             
             mux, muy, sx, sy, corr = get_coef(output_obs)
             next_x, next_y = sample_gaussian_2d(mux, muy, sx, sy, corr)
@@ -37,7 +37,7 @@ def sample(net, input_data, pred_data, num_nodes, args):
             curr_data = output_data[tstep]
 
             outputs, cell_hidden_state_tuple, graph_hidden_state_tuple = \
-                net([curr_data], cell_hidden_state_tuple, graph_hidden_state_tuple)
+                net([curr_data], cell_hidden_state_tuple, graph_hidden_state_tuple, 1, num_nodes)
             
             mux, muy, sx, sy, corr = get_coef(outputs)
             next_x, next_y = sample_gaussian_2d(mux, muy, sx, sy, corr)
@@ -96,47 +96,50 @@ def exec_model(dataloader_train, dataloader_test, args):
 
             print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
 
-            print('****** Testing beginning ******')
-            err_epoch = 0.0
+        loss_epoch /= num_batch
+        print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))    
 
-            num_batch = 0
-            for batch in dataloader_test:
-                t_start = time.time()
-                input_data_list, pred_data_list, ids_list, num_nodes_list = batch
+        print('****** Testing beginning ******')
+        err_epoch = 0.0
 
-                err_batch = 0.0
-                for idx in range(args.batch_size):
-                    input_data = input_data_list[idx]
-                    pred_data = pred_data_list[idx]
-                    ids = ids_list[idx]
-                    num_nodes = num_nodes_list[idx]
+        num_batch = 0
+        for batch in dataloader_test:
+            t_start = time.time()
+            input_data_list, pred_data_list, ids_list, num_nodes_list = batch
 
-                    if args.use_cuda:
-                        input_data = input_data.cuda()
-                        pred_data = pred_data.cuda()
-                        ids = ids.cuda()
-                    
-                    input_data, first_value_dict = data_vectorize(input_data)
-                    ret_seq = sample(net, input_data, pred_data, num_nodes, args)
-                    ret_seq = data_revert(ret_seq, first_value_dict)
+            err_batch = 0.0
+            for idx in range(args.batch_size):
+                input_data = input_data_list[idx]
+                pred_data = pred_data_list[idx]
+                ids = ids_list[idx]
+                num_nodes = num_nodes_list[idx]
 
-                    veh_ret_seq, _ = veh_ped_seperate(ret_seq, ids)
-                    veh_pred_seq, _ = veh_ped_seperate(pred_data, ids)
+                if args.use_cuda:
+                    input_data = input_data.cuda()
+                    pred_data = pred_data.cuda()
+                    ids = ids.cuda()
+                
+                input_data, first_value_dict = data_vectorize(input_data)
+                ret_seq = sample(net, input_data, pred_data, num_nodes, args)
+                ret_seq = data_revert(ret_seq, first_value_dict)
 
-                    error = displacement_error(veh_ret_seq, veh_pred_seq)
-                    # error = final_displacement_error(veh_ret_seq, veh_pred_seq)
+                veh_ret_seq, _ = veh_ped_seperate(ret_seq, ids)
+                veh_pred_seq, _ = veh_ped_seperate(pred_data, ids)
 
-                    err_batch += error.item()
+                error = displacement_error(veh_ret_seq, veh_pred_seq)
+                # error = final_displacement_error(veh_ret_seq, veh_pred_seq)
 
-                t_end = time.time()
-                err_batch /= args.batch_size
-                err_epoch += err_batch
-                num_batch += 1
+                err_batch += error.item()
 
-                print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+            t_end = time.time()
+            err_batch /= args.batch_size
+            err_epoch += err_batch
+            num_batch += 1
 
-            err_epoch /= num_batch
-            print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
+            print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+
+        err_epoch /= num_batch
+        print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
 
 
 def main():

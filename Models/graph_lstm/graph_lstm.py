@@ -88,6 +88,8 @@ class GraphLSTM(nn.Module):
             veh_nodes = torch.tensor(range(num_nodes)).long()
             for j in range(num_nodes):
                 veh_other_idx = torch.cat((veh_nodes[:j], veh_nodes[j+1:]))
+                if self.use_cuda:
+                    veh_other_idx = veh_other_idx.cuda()
                 veh_other_graph_h = torch.index_select(curr_veh_graph_h, 0, veh_other_idx)
                 veh_other_graph_embedding.append(veh_other_graph_h.sum(dim=0))
             veh_graph_embedding = torch.stack(veh_other_graph_embedding)
@@ -127,7 +129,7 @@ class GraphLSTM(nn.Module):
             else:
                 cell_state_tuple = (curr_cell_h, )
             
-            outputs[framenum*num_nodes:(framenum+1)*num_nodes] = self.output_layer(curr_cell_h)
+            outputs[i*num_nodes:(i+1)*num_nodes] = self.output_layer(curr_cell_h)
         
         outputs = outputs.view(seq_len, num_nodes, self.output_size)
         return outputs, cell_state_tuple, graph_veh_state_tuple, graph_ped_state_tuple

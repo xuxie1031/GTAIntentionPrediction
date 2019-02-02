@@ -92,7 +92,10 @@ def exec_model(dataloader_train, dataloader_test, args):
                         ids = ids.cuda()
                     
                     input_data, first_values_dict = data_vectorize(input_data)
-                    input_data_nbrs, last_frame_mask = get_conv_mask(input_data[-1], input_data, args.units, num_nodes, args.encoder_dim, args.neighbor_size, args.grid_size)
+                    input_data_nbrs, last_frame_mask = get_conv_mask(input_data[-1], input_data, num_nodes, args.encoder_dim, args.neighbor_size, args.grid_size, use_cuda=args.use_cuda)
+
+                    if args.use_cuda:
+                        last_frame_mask = last_frame_mask.cuda()
 
                     output_data = net(input_data, input_data_nbrs, last_frame_mask)
                     ret_data = data_revert(output_data[:, :, :2], first_values_dict)
@@ -131,7 +134,7 @@ def main():
     parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--lr', type=float, default=.003)
     parser.add_argument('--neighbor_size', type=int, default=32)
-    parser.add_argument('--grid_size', type=int, default=8)
+    parser.add_argument('--grid_size', type=int, default=8)    # fix for conv
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--pretrain_epochs', type=int, default=5)

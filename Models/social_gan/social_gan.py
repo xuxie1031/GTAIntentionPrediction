@@ -59,6 +59,7 @@ class Decoder(nn.Module):
         self.decoder = nn.LSTM(embedding_dim, h_dim, num_layers, dropout=dropout)
 
         self.pool_net = PoolHiddenNet(
+            input_dim=input_dim,
             embedding_dim=embedding_dim,
             h_dim=h_dim,
             mlp_dim=mlp_dim,
@@ -114,7 +115,7 @@ class TrajectoryGenerator(nn.Module):
     ):
         super(TrajectoryGenerator, self).__init__()
 
-        self.use_cuda = True
+        self.use_cuda = use_cuda
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.input_dim = input_dim
@@ -234,6 +235,7 @@ class TrajectoryDiscriminator(nn.Module):
     ):
         super(TrajectoryDiscriminator, self).__init__()
 
+        self.use_cuda = use_cuda
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.seq_len = obs_len+pred_len

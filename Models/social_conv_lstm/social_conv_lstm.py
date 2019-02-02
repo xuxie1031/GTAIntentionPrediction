@@ -5,9 +5,12 @@ from utils import *
 
 class SocialConvLSTM(nn.Module):
     def __init__(self, obs_len, pred_len, input_dim, output_dim, encoder_dim=64, decoder_dim=128,
-                 grid_size=(8,8), soc_conv1_depth=64, soc_conv2_depth=16, 
-                 dyn_embedding_dim=32, input_embedding_dim=32, use_cuda=True
+                 dyn_embedding_dim=32, input_embedding_dim=32, grid_size=(8,8), soc_conv1_depth=64, soc_conv2_depth=16, 
+                 use_cuda=True
     ):
+        super(SocialConvLSTM, self).__init__()
+
+        self.use_cuda = use_cuda
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.input_dim = input_dim

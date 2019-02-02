@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 class WriteOnceDict(dict):
 	def __setitem__(self, key, value):
@@ -63,7 +64,7 @@ def gaussian_likelihood_2d(outputs, target):
     result = torch.exp(-z/(2*negrho))
     denom = 2*np.pi*(sxsy*torch.sqrt(negrho))
 
-    result /= denom
+    result = result/denom
 
     epsilon = 1e-20
     result = -torch.log(torch.clamp(result, min=epsilon))
@@ -74,6 +75,7 @@ def gaussian_likelihood_2d(outputs, target):
 
 def sample_gaussian_2d(mux, muy, sx, sy, corr):
     o_mux, o_muy, o_sx, o_sy, o_corr = mux[0, :], muy[0, :], sx[0, :], sy[0, :], corr[0, :]
+    o_mux, o_muy, o_sx, o_sy, o_corr = o_mux.cpu().numpy(), o_muy.cpu().numpy(), o_sx.cpu().numpy(), o_sy.cpu().numpy(), o_corr.cpu().numpy()
 
     batch = mux.size(1)
     next_x = torch.zeros(batch)

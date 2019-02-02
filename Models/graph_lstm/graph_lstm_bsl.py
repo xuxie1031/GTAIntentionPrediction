@@ -69,6 +69,8 @@ class GraphLSTMBSL(nn.Module):
             nodes = torch.tensor(range(num_nodes)).long()
             for j in range(num_nodes):
                 other_idx = torch.cat((nodes[:j], nodes[j+1:]))
+                if self.use_cuda:
+                    other_idx = other_idx.cuda()
                 other_graph_h = torch.index_select(curr_graph_h, 0, other_idx)
                 other_graph_embedding.append(other_graph_h.sum(dim=0))
             graph_embedding = torch.stack(other_graph_embedding)
@@ -90,7 +92,7 @@ class GraphLSTMBSL(nn.Module):
             else:
                 cell_state_tuple = (curr_cell_h, )
             
-            outputs[framenum*num_nodes:(framenum+1)*num_nodes] = self.output_layer(curr_cell_h)
+            outputs[i*num_nodes:(i+1)*num_nodes] = self.output_layer(curr_cell_h)
             
 
         outputs = outputs.view(seq_len, num_nodes, self.output_size)
