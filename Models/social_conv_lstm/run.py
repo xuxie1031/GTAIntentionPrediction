@@ -103,8 +103,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                     veh_ret_data, _ = veh_ped_seperate(ret_data, ids)
                     veh_pred_data, _ = veh_ped_seperate(pred_data, ids)
 
-                    error = displacement_error(veh_ret_data, veh_pred_data)
-                    # error = final_displacement_error(veh_ret_data, veh_pred_data)
+                    # error = displacement_error(veh_ret_data, veh_pred_data)
+                    error = final_displacement_error(veh_ret_data[-1], veh_pred_data[-1])
 
                     err_batch += error.item()
                 t_end = time.time()

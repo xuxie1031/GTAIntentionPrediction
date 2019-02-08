@@ -142,8 +142,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                 veh_pred_data = data_revert(veh_pred_data, first_values_dict)
                 ret_seq = data_revert(ret_seq, first_values_dict)
 
-                error = displacement_error(ret_seq, veh_pred_data)
-                # error = final_displacement_error(ret_seq, veh_pred_data)
+                # error = displacement_error(ret_seq, veh_pred_data)
+                error = final_displacement_error(ret_seq[-1], veh_pred_data[-1])
 
                 err_batch += error.item()
             
@@ -181,7 +181,7 @@ def main():
     parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
-    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--num_epochs', type=int, default=1000)
 
     args = parser.parse_args()
 
