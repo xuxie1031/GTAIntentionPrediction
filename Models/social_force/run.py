@@ -13,18 +13,21 @@ from DataSet import *
 
 
 def sample(pred_data, batch_prev_pos, batch_curr_pos, betas, sigmaws, sigmads, args):
-    
+    batch = pred_data.shape[1]
+    batch_prev_pos_backup = batch_prev_pos
+    batch_curr_pos_backup = batch_curr_pos
+
     min_err = np.inf
     best_beta, best_sigmaw, best_sigmad = 0.0, 0.0, 0.0
     for beta_ in betas:
         for sigmaw in sigmaws:
             for sigmad in sigmads:
 
-                ret_seq = np.zeros((args.pred_len, args.batch_size, 2))
+                ret_seq = np.zeros((args.pred_len, batch, 2))
                 for i in range(args.pred_len):
                     w = w_mat(batch_prev_pos, batch_curr_pos, beta_, sigmaw)
 
-                    for node in range(args.batch_size):
+                    for node in range(batch):
                         self_pos = batch_curr_pos[node, :]
                         delta_poses = np.random.uniform(0.0, args.axis_len, (args.best_k, 2))
 
@@ -42,11 +45,14 @@ def sample(pred_data, batch_prev_pos, batch_curr_pos, betas, sigmaws, sigmads, a
                     batch_prev_pos = batch_curr_pos
                     batch_curr_pos = ret_seq[i]
 
-                batch_err = final_displacement_error(ret_seq, pred_data)
+                batch_err = final_displacement_error(ret_seq[-1], pred_data[-1])
                 if batch_err < min_err:
                     min_err = batch_err
                     best_beta, best_sigmaw, best_sigmad = beta_, sigmaw, sigmad
                 print('current best params: beta_={}, sigmaw={}, sigmad={}, err={}'.format(best_beta, best_sigmaw, best_sigmad, min_err))
+
+                batch_prev_pos = batch_prev_pos_backup
+                batch_curr_pos = batch_curr_pos_backup
 
 
 def exec_model(dataloader_train, dataloader_test, args):

@@ -25,7 +25,7 @@ def d_vec(delta_pos, self_pos, batch_prev_pos, batch_curr_pos):
     delta_pos = batch_curr_pos-self_pos
     delta_v = delta_pos-batch_v
 
-    d = delta_pos-np.sum(delta_pos*delta_v, axis=1)/(np.linalg.norm(delta_v, axis=1))**2 * delta_v
+    d = delta_pos-(np.sum(delta_pos*delta_v, axis=1)/(np.linalg.norm(delta_v, axis=1))**2).repeat(2).reshape(-1, 2) * delta_v
     d = np.linalg.norm(d, axis=1)
 
     return d
