@@ -78,3 +78,42 @@ void draw_menu_line(std::string caption, float lineWidth, float lineHeight, floa
 		lineWidthScaled, ((((float)(num25)* UI::_0xDB88A37483346780(text_scale, 0)) + (lineHeightScaled * 2.0f)) + 0.005f),
 		rect_col[0], rect_col[1], rect_col[2], rect_col[3]);
 }
+
+void printOnScreen(std::string s) {
+	DWORD maxTickCount = GetTickCount() + 1000;
+	while (GetTickCount() < maxTickCount) {
+		draw_menu_line(s, 350.0, 15.0, 15, 400, 5.0, false, true);
+		WAIT(0);
+	}
+	WAIT(0);
+}
+
+void draw_mark_at(Vector2 coords, int r, int g, int b)
+{
+	float side = 10;
+
+	int screen_w, screen_h;
+	GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
+
+	GRAPHICS::DRAW_RECT((coords.x - side/2)/screen_w, (coords.y - side/2)/screen_h,
+		side/screen_w, side/screen_h, r, g, b, 255);
+}
+
+
+void something() {
+	int screen_res_x;
+
+	int screen_res_y;
+
+	GRAPHICS::GET_SCREEN_RESOLUTION(&screen_res_x, &screen_res_y);
+
+	char* dword = "commonmenu";
+
+	char* dword2 = "gradient_bgd";
+
+	Vector3 texture_res = GRAPHICS::GET_TEXTURE_RESOLUTION(dword, dword2);
+
+	GRAPHICS::DRAW_SPRITE(dword, dword2, 0.16f, 0.5f, texture_res.x / (float)screen_res_x, texture_res.y / (float)screen_res_y, 0.0f, 255, 255, 255, 255);
+
+
+}
