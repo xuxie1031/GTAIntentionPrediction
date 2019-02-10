@@ -13,6 +13,7 @@ def data_loader(args, path):
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_worker,
+        drop_last=True,
         collate_fn=seq_collate
     )
 
