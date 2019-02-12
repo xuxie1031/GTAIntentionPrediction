@@ -48,14 +48,17 @@ def sample(net, veh_input_data, ped_input_data, ped_pred_data, veh_num_nodes, pe
 
 def exec_model(dataloader_train, dataloader_test, args):
     net = GraphLSTM(args)
-
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=1.0)
+    model_name = 'graph_lstm.pth.tar'
+
+    if args.bload:
+        state = torch.load(os.path.join(args.save_path, model_name))
+        net.load_state_dict(state['network_dict'])
+        optimizer.load_state_dict(state['opt_dict'])
 
     err_epochs = []
     for epoch in range(args.num_epochs):
         print('****** Training beginning ******')
-        scheduler.step()
         loss_epoch = 0
 
         num_batch = 0
@@ -109,6 +112,13 @@ def exec_model(dataloader_train, dataloader_test, args):
 
         loss_epoch /= num_batch
         print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
+
+        if epoch % args.save_checkpt == 0:
+            state = {}
+            state['network_dict'] = net.state_dict()
+            state['opt_dict'] = optimizer.state_dict()
+            state['err_list'] = err_epochs
+            torch.save(state, os.path.join(args.save_path, model_name))
 
         print('****** Testing beginning *******')
         err_epoch = 0.0
@@ -187,7 +197,10 @@ def main():
     parser.add_argument('--gru', action='store_true', default=True)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=1000)
-
+    parser.add_argument('--save_checkpt', type=int, default=1)
+    parser.add_argument('--save_path', type=str, default='.')
+    parser.add_argument('--bload', type='store_true', default=False)
+    
     args = parser.parse_args()
 
     _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'train'))
