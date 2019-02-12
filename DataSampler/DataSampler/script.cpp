@@ -1,37 +1,26 @@
 #include "script.h"
-#include "keyboard.h"
-#include "menu.h"
-
-#include <string>
-#include <ctime>
-#include <sstream>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <utility>
-#include <tuple>
-#include <unordered_map>
-#include <Windows.h>
-#include <functional>
-
-#include "nlohmann/json.hpp"
-
-using json = nlohmann::json;
 
 #pragma warning(disable : 4244 4305) // double <-> float conversions
 
 const int PED_ID_OFFSET = 100;
+const std::string settingsDirectory = "RecordSettings";
 
 json settings;
 std::string settingFile;
 std::vector<Vehicle> createdVehicles;
 std::vector<Ped> createdDrivers;
-std::vector<int> createdCarSequences;
+std::vector<TaskSequence> createdCarSequences;
 
 std::vector<Ped> createdPeds;
-std::vector<int> createdPedSequences;
+std::vector<TaskSequence> createdPedSequences;
 
 void outputDebugMessage(std::string s) {
+	static bool initialized = false;
+	if (initialized = false) {
+		initialized = true;
+		remove("debug.txt");
+	}
+
 	std::ofstream debug("debug.txt", std::fstream::app);
 	DWORD t = GetTickCount();
 
@@ -48,7 +37,7 @@ std::vector<std::string> readAllFiles(std::string folder)
 	if (hFind != INVALID_HANDLE_VALUE) {
 		do {
 			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-				res.push_back(data.cFileName);
+				res.push_back(folder + "/" + data.cFileName);
 			}
 		} while (FindNextFile(hFind, &data));
 		FindClose(hFind);
@@ -56,7 +45,7 @@ std::vector<std::string> readAllFiles(std::string folder)
 	return res;
 }
 
-Entity spawnAtCoords(LPCSTR modelName, int modelType, Vector3 coords, float heading = 0.0)
+Entity spawnAtCoords(LPCSTR modelName, int modelType, Vector3d coords, float heading = 0.0)
 {
 	DWORD model;
 	if (modelName[0] != '\0') {
@@ -81,6 +70,7 @@ Entity spawnAtCoords(LPCSTR modelName, int modelType, Vector3 coords, float head
 		else {
 			p = PED::CREATE_RANDOM_PED(coords.x, coords.y, coords.z);
 		}
+		PED::SET_PED_MAX_HEALTH(p, 100);
 		createdPeds.push_back(p);
 		e = p;
 	}
@@ -105,6 +95,7 @@ Ped spawnDriver(Vehicle vehicle, LPCSTR modelName) {
 	else {
 		p = PED::CREATE_RANDOM_PED_AS_DRIVER(vehicle, true);
 	}
+	PED::SET_PED_MAX_HEALTH(p, 100);
 	createdDrivers.push_back(p);
 
 	if (modelName[0] != '\0') {
@@ -114,15 +105,25 @@ Ped spawnDriver(Vehicle vehicle, LPCSTR modelName) {
 	return p;
 }
 
+TaskSequence createTaskSequence(Ped p, std::function<void()> actionItem) {
+	TaskSequence sequence = 0;
+	AI::OPEN_SEQUENCE_TASK(&sequence);
+	actionItem();
+	AI::CLOSE_SEQUENCE_TASK(sequence);
+	AI::TASK_PERFORM_SEQUENCE(p, sequence);
+	createdCarSequences.push_back(sequence);
+	return sequence;
+}
+
 void deleteAllCreated() {
 	for (int i = createdPedSequences.size(); i > 0; i--) {
-		int sequence = createdPedSequences.back();
+		TaskSequence sequence = createdPedSequences.back();
 		AI::CLEAR_SEQUENCE_TASK(&sequence);
 		createdPedSequences.pop_back();
 	}
 
 	for (int i = createdCarSequences.size(); i > 0; i--) {
-		int sequence = createdCarSequences.back();
+		TaskSequence sequence = createdCarSequences.back();
 		AI::CLEAR_SEQUENCE_TASK(&sequence);
 		createdCarSequences.pop_back();
 	}
@@ -187,7 +188,7 @@ int randomNum(int low, int high) {
 }
 
 float getModelLength(LPCSTR modelName) {
-	Vector3 min, max;
+	Vector3d min, max;
 	Hash model = GAMEPLAY::GET_HASH_KEY((char *)modelName);
 	STREAMING::REQUEST_MODEL(model);
 	while (!STREAMING::HAS_MODEL_LOADED(model)) WAIT(0);
@@ -200,9 +201,9 @@ void clearArea() {
 	GAMEPLAY::CLEAR_AREA_OF_VEHICLES(0, 0, 0, 10000, false, false, false, false, false);
 }
 
-void getEntityMotion(Entity e, Vector3* coords3D = NULL, Vector2* coords2D = NULL, float* heading = NULL, float* speed = NULL) {
+void getEntityMotion(Entity e, Vector3d* coords3D = NULL, Vector2* coords2D = NULL, float* heading = NULL, float* speed = NULL) {
 
-	Vector3 coords = ENTITY::GET_ENTITY_COORDS(e, TRUE);
+	Vector3d coords = ENTITY::GET_ENTITY_COORDS(e, TRUE);
 
 	if (coords3D != NULL) {
 		*coords3D = coords;
@@ -228,7 +229,7 @@ void getEntityMotion(Entity e, Vector3* coords3D = NULL, Vector2* coords2D = NUL
 
 std::string showCoords() {
 	Player e = PLAYER::PLAYER_PED_ID();
-	Vector3 coords3D;
+	Vector3d coords3D;
 	Vector2 coords2D;
 	float heading;
 
@@ -268,7 +269,7 @@ void processSampling() {
 		if (IsKeyJustUp(VK_NUMPAD5)) {
 			std::string label = getKeyboardInput();
 			if (label != "")
-				record << label << ","  << coords << std::endl;
+				record << label << "," << coords << std::endl;
 		}
 		if (IsKeyJustUp(VK_NUMPAD0)) {
 			record.close();
@@ -307,7 +308,7 @@ void processRecording(std::vector<std::string> fileName, std::function<bool()> d
 				carID++;
 			}
 
-			Vector3 coords3D;
+			Vector3d coords3D;
 			Vector2 coords2D;
 			float heading;
 			// float speed;
@@ -320,14 +321,14 @@ void processRecording(std::vector<std::string> fileName, std::function<bool()> d
 
 			record << count << "," << IDMap[e] << "," << coords2D.x << "," << coords2D.y << "," << coords3D.x << "," << coords3D.y << "," << coords3D.z << "," << heading << std::endl;
 		}
-		if (seeACar) {
+		if (seeACar || count != 0) {
 			for (int i = 0; i < createdPeds.size(); i++) {
 				Entity e = createdPeds[i];
 				if (!IDMap.count(e)) {
 					IDMap[e] = pedID;
 					pedID++;
 				}
-				Vector3 coords3D;
+				Vector3d coords3D;
 				Vector2 coords2D;
 				float heading;
 				//float speed;
@@ -358,14 +359,16 @@ void teleport() {
 	}
 
 	Ped p = PLAYER::PLAYER_PED_ID();
-	ENTITY::SET_ENTITY_COORDS(p, settings["centerCoords"][0], settings["centerCoords"][1], settings["centerCoords"][2], 1, 0, 0, 1);
+	Vector3d coords = settings["centerCoords"];
+	ENTITY::SET_ENTITY_COORDS(p, coords.x, coords.y, coords.z, 1, 0, 0, 1);
 }
 
 void setCars() {
 
 	if (settings["maxTotalCars"] == 0) return;
-
+	outputDebugMessage("set Cars start.");
 	float carLength = getModelLength(settings["carModel"].get<std::string>().c_str());
+	outputDebugMessage("carLength is " + std::to_string(carLength));
 
 	std::vector<int> numCars(settings["carStartPositions"].size(), 0);
 	int totalCars = randomNum((int)settings["minTotalCars"], settings["maxTotalCars"]);
@@ -373,62 +376,57 @@ void setCars() {
 		int lane = randomNum(0, numCars.size() - 1);
 		numCars[lane]++;
 	}
+	outputDebugMessage("Assigned Lanes for " + std::to_string(totalCars) + " cars.");
 
 	for (int i = 0; i < settings["carStartPositions"].size(); i++) {
-		Vector3 start;
-		Vector3 front = Vector3(settings["carStartPositions"][i]["front"][0], settings["carStartPositions"][i]["front"][1], settings["carStartPositions"][i]["front"][2]);
-		Vector3 back = Vector3(settings["carStartPositions"][i]["back"][0], settings["carStartPositions"][i]["back"][1], settings["carStartPositions"][i]["back"][2]);
-		start.x = randomNum(front.x, back.x);
-		float ratio = (start.x - front.x) / (back.x - front.x);
-		start.y = (back.y - front.y) * ratio + front.y;
-		start.z = (back.z - front.z) * ratio + front.z;
+		outputDebugMessage("Spawn cars on Lane " + std::to_string(i));
+
+		Vector3d start;
+		Vector3d front = Vector3d(settings["carStartPositions"][i]["front"]);
+		Vector3d back = Vector3d(settings["carStartPositions"][i]["back"]);
+		
+		float ratio = randomNum(0.0f, 1.0f);
+		start = (back - front) * ratio + front;
 
 		ratio = (settings["carInterval"] + carLength) / SYSTEM::VDIST(front.x, front.y, front.z, back.x, back.y, back.z);
 
 		for (int j = 0; j < numCars[i]; j++) {
-
+			outputDebugMessage("Spawn " + std::to_string(j) + "-th car.");
 			Vehicle v = spawnAtCoords(settings["carModel"].get<std::string>().c_str(), MODEL_VEH, start, settings["carHeading"]);
 			Ped driver = spawnDriver(v, settings["pedModel"].get<std::string>().c_str());
 
-			int goal = randomNum(0, settings["carStartPositions"][i]["goals"].size() - 1);
+			int goalNum = randomNum(0, settings["carStartPositions"][i]["goals"].size() - 1);
 			float speed = randomNum((float)settings["carMinSpeed"], settings["carMaxSpeed"]);
+			Vector3d goal = settings["carStartPositions"][i]["goals"][goalNum];
 
-			int sequence = 0;
-			AI::OPEN_SEQUENCE_TASK(&sequence);
-			AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, settings["carStartPositions"][i]["goals"][goal][0], settings["carStartPositions"][i]["goals"][goal][1], settings["carStartPositions"][i]["goals"][goal][2], speed, 0, GAMEPLAY::GET_HASH_KEY((char *)(settings["carModel"].get<std::string>().c_str())), settings["driveStyle"], settings["carStopRange"], 1.0);
-			AI::CLOSE_SEQUENCE_TASK(sequence);
-			AI::TASK_PERFORM_SEQUENCE(driver, sequence);
+			createTaskSequence(driver, [&]() {
+				AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, goal.x, goal.y, goal.z, speed, 0, GAMEPLAY::GET_HASH_KEY((char *)(settings["carModel"].get<std::string>().c_str())), settings["driveStyle"], settings["carStopRange"], 1.0);
+			});
 
-			createdCarSequences.push_back(sequence);
-
-			start.x = (back.x - front.x) * ratio + start.x;
-			start.y = (back.y - front.y) * ratio + start.y;
-			start.z = (back.z - front.z) * ratio + start.z;
+			start = (back - front) * ratio + start;
 			WAIT(0);
 		}
 	}
 }
 
 void setWanderPed() {
-	std::vector<Vector3> pedsPosition;
+	std::vector<Vector3d> pedsPosition;
 
 	if (settings["totalWanderPeds"] == 0) return;
 
-	Vector3 origin = Vector3(settings["wanderPedsGenArea"]["origin"][0], settings["wanderPedsGenArea"]["origin"][1], settings["wanderPedsGenArea"]["origin"][2]);
-	Vector3 unit1 = Vector3(settings["wanderPedsGenArea"]["unit1"][0], settings["wanderPedsGenArea"]["unit1"][1], settings["wanderPedsGenArea"]["unit1"][2]);
-	Vector3 unit2 = Vector3(settings["wanderPedsGenArea"]["unit2"][0], settings["wanderPedsGenArea"]["unit2"][1], settings["wanderPedsGenArea"]["unit2"][2]);
+	Vector3d origin = Vector3d(settings["wanderPedsGenArea"]["origin"]);
+	Vector3d unit1 = Vector3d(settings["wanderPedsGenArea"]["unit1"]);
+	Vector3d unit2 = Vector3d(settings["wanderPedsGenArea"]["unit2"]);
 
 	float walkRadius = SYSTEM::VDIST(unit1.x, unit1.y, unit1.z, unit2.x, unit2.y, unit2.z) * 0.7;
 
 	for (int i = 0; i < settings["totalWanderPeds"]; i++) {
 		float ratio1 = randomNum(0.0f, 1.0f);
 		float ratio2 = randomNum(0.0f, 1.0f);
-		float x = ratio1 * (unit1.x - origin.x) + ratio2 * (unit2.x - origin.x) + origin.x;
-		float y = ratio1 * (unit1.y - origin.y) + ratio2 * (unit2.y - origin.y) + origin.y;
-		float z = ratio1 * (unit1.z - origin.z) + ratio2 * (unit2.z - origin.z) + origin.z;
+		Vector3d start = (unit1 - origin) * ratio1 + (unit2 - origin) * ratio2 + origin;
 		bool tooClose = false;
 		for (int j = 0; j < pedsPosition.size(); j++) {
-			if (SYSTEM::VDIST(pedsPosition[j].x, pedsPosition[j].y, pedsPosition[j].z, x, y, z) < 1.0) {
+			if (SYSTEM::VDIST(pedsPosition[j].x, pedsPosition[j].y, pedsPosition[j].z, start.x, start.y, start.z) < 1.0) {
 				tooClose = true;
 				break;
 			}
@@ -437,40 +435,32 @@ void setWanderPed() {
 			i--;
 			continue;
 		}
-		pedsPosition.push_back(Vector3(x, y, z));
+		pedsPosition.push_back(start);
 		Ped p = spawnAtCoords(settings["pedModel"].get<std::string>().c_str(), MODEL_PED, pedsPosition.back());
 
+		createTaskSequence(p, [&]() {
+			Vector3d centerCoords = settings["centerCoords"];
+			AI::TASK_WANDER_IN_AREA(0, centerCoords.x, centerCoords.y, centerCoords.z, walkRadius, 0.0, 0.0);
+			//AI::TASK_WANDER_STANDARD(p, 10.0, 10);
+		});
 
-		int sequence = 0;
-		AI::OPEN_SEQUENCE_TASK(&sequence);
-		AI::TASK_WANDER_IN_AREA(0, settings["centerCoords"][0], settings["centerCoords"][1], settings["centerCoords"][2], walkRadius, 0.0, 0.0);
-		AI::CLOSE_SEQUENCE_TASK(sequence);
-
-		AI::TASK_PERFORM_SEQUENCE(p, sequence);
-		createdPedSequences.push_back(sequence);
-
-		//AI::TASK_WANDER_STANDARD(p, 10.0, 10);
 		WAIT(0);
 	}
 }
 
 void setScriptPed(bool onlyOnce = false) {
-	std::vector<std::pair<Vector3, Vector3>> pedRoutes;
+	std::vector<std::pair<Vector3d, Vector3d>> pedRoutes;
 
 	int totalScriptPeds = onlyOnce ? 1 : settings["totalScriptPeds"];
 
 	for (int i = 0; i < totalScriptPeds; i++) {
 		int startArea = randomNum(0, settings["scriptPedsEndPoints"].size() - 1);
 		int startCode = randomNum(0, settings["scriptPedsEndPoints"][startArea].size() - 1);
-		Vector3 start = Vector3(settings["scriptPedsEndPoints"][startArea][startCode][0], settings["scriptPedsEndPoints"][startArea][startCode][1], settings["scriptPedsEndPoints"][startArea][startCode][2]);
+		Vector3d start = Vector3d(settings["scriptPedsEndPoints"][startArea][startCode]);
 
 		int endArea = randomNum(0, settings["scriptPedsEndPoints"].size() - 1);
-		if (endArea == startArea) {
-			i--;
-			continue;
-		}
 		int endCode = randomNum(0, settings["scriptPedsEndPoints"][endArea].size() - 1);
-		Vector3 end = Vector3(settings["scriptPedsEndPoints"][endArea][endCode][0], settings["scriptPedsEndPoints"][endArea][endCode][1], settings["scriptPedsEndPoints"][endArea][endCode][2]);
+		Vector3d end = Vector3d(settings["scriptPedsEndPoints"][endArea][endCode]);
 
 		bool repeated = false;
 		for (int j = 0; j < pedRoutes.size(); j++) {
@@ -480,7 +470,7 @@ void setScriptPed(bool onlyOnce = false) {
 			}
 		}
 
-		if (repeated) {
+		if (endArea == startArea || repeated) {
 			i--;
 			continue;
 		}
@@ -488,13 +478,9 @@ void setScriptPed(bool onlyOnce = false) {
 		pedRoutes.push_back(std::make_pair(start, end));
 		Ped p = spawnAtCoords(settings["pedModel"].get<std::string>().c_str(), MODEL_PED, start);
 
-		int sequence = 0;
-		AI::OPEN_SEQUENCE_TASK(&sequence);
-		AI::TASK_GO_STRAIGHT_TO_COORD(0, end.x, end.y, end.z, 1.0, 200000, 0.0, 0.2);
-		AI::CLOSE_SEQUENCE_TASK(sequence);
-
-		AI::TASK_PERFORM_SEQUENCE(p, sequence);
-		createdPedSequences.push_back(sequence);
+		createTaskSequence(p, [&]() {
+			AI::TASK_GO_STRAIGHT_TO_COORD(0, end.x, end.y, end.z, 1.0, 200000, 0.0, 0.2);
+		});
 
 		WAIT(0);
 	}
@@ -508,7 +494,7 @@ void startSimulation() {
 
 	DWORD nextTickCount;
 	bool isPedInjured;
-	
+
 	auto delegate = [&]() {
 		clearArea();
 
@@ -559,7 +545,7 @@ void startSimulation() {
 		nextTickCount = GetTickCount();
 		isPedInjured = false;
 		json recordFile = settings["recordDirectory"];
-		recordFile.push_back("record" + std::to_string(i) + ".csv");
+		recordFile.push_back("record" + std::to_string(i));
 		processRecording(recordFile, delegate, settings["period"]);
 		outputDebugMessage("setScriptPed complete.");
 		deleteAllCreated();
@@ -569,7 +555,6 @@ void startSimulation() {
 			i--;
 		}
 	}
-	printOnScreen("3");
 
 }
 
@@ -586,12 +571,14 @@ void toggleCamera() {
 
 	if (!initialized) {
 		initialized = true;
-		CAM::SET_CAM_COORD(customCam, settings["centerCoords"][0], settings["centerCoords"][1], (float)settings["centerCoords"][2] + settings["cameraHeight"]);
 		CAM::SET_CAM_FOV(customCam, 130.0);
 		// CAM::POINT_CAM_AT_COORD(customCam, centerCoords.x, centerCoords.y, centerCoords.z);
-		CAM::SET_CAM_ROT(customCam, 270.0, 360.0 - (float)settings["carHeading"], 0.0, 2);
 		CAM::SET_CINEMATIC_MODE_ACTIVE(false);
 	}
+	Vector3d centerCoords(settings["centerCoords"]);
+	CAM::SET_CAM_COORD(customCam, centerCoords.x, centerCoords.y, centerCoords.z + settings["cameraHeight"]);
+	CAM::SET_CAM_ROT(customCam, 270.0, 360.0 - (float)settings["carHeading"], 0.0, 2);
+
 	if (!active) {
 		CAM::SET_CAM_ACTIVE(customCam, true);
 		CAM::RENDER_SCRIPT_CAMS(true, false, 3000, true, false);
@@ -603,37 +590,30 @@ void toggleCamera() {
 	active = !active;
 }
 
-// TODO: enable multiple setting reading
-// Need new menu
 void loadSettings() {
-	std::ifstream config("settings.json");
-	if (config.is_open()) {
-		config >> settings;
+	auto fileList = readAllFiles(settingsDirectory);
+
+	auto loadFile = [&](int i) {
+		std::ifstream config(fileList[i]);
+		outputDebugMessage("Load config file" + fileList[i]);
+		if (config.is_open()) {
+			settings = json();
+			config >> settings;
+			config.close();
+			settingFile = fileList[i];
+		}
+	};
+
+	std::vector<std::function<void()>> funcList;
+
+	for (int i = 0; i < fileList.size(); i++) {
+		funcList.push_back(std::bind(loadFile, i));
 	}
-	else {
-		settings["centerCoords"] = { -1382.03, -390.19, 36.69 };
-		settings["carStartPositions"] = { { { "front", {-1420.16,-421.93,36.22} }, { "back", {-1427.47,-426.17,36.05} }, { "goals", { { -1429.17,-327.34,44.43 }, { -1320.46,-361.92,36.75 } } } }, { { "front", {-1417.19,-426.05,36.14} }, { "back", {-1425.10,-430.49,36.00} }, { "goals", { { -1320.16,-489.37,33.34 }, { -1319.56, -367.42, 36.69 } } } } };
-		settings["wanderPedsGenArea"] = { { "origin", {-1362.92, -394.49, 36.55} }, { "unit1", {-1387.76, -411.07, 36.56} }, { "unit2", {-1378.92, -370.83, 36.51} } };
-		settings["scriptPedsEndPoints"] = { { {-1377.41,-366.81,36.60}, {-1380.84,-366.67,36.57} }, { {-1409.80,-386.40,36.63}, {-1408.43,-385.78,36.61} }, { {-1390.06,-415.37,36.58}, {-1385.91,-417.79,36.61} }, { {-1359.15,-397.74,36.61}, {-1357.56,-393.77,36.58} } };
-		settings["recordDirectory"] = json::array({ "complexScene" });
-		settings["cameraHeight"] = 15.0;
-		settings["period"] = 100;
-		settings["mintotalCars"] = 2;
-		settings["maxtotalCars"] = 3;
-		settings["carHeading"] = 302.37;
-		settings["carInterval"] = 2.0;
-		settings["carStopRange"] = 2.0;
-		settings["driveStyle"] = 786475; // normal except 128--stop on lights
-		settings["carMinSpeed"] = 3.0;
-		settings["carMaxSpeed"] = 10.0;
-		settings["totalWanderPeds"] = 6;
-		settings["totalScriptPeds"] = 3;
-		settings["carModel"] = "Adder";
-		settings["pedModel"] = "";
-		settings["continuousPedGen"] = true;
-		settings["minPedGenInterval"] = 2000;
-		settings["maxPedGenInterval"] = 6000;
-	}
+
+	Menu loadSettingsMenu("Choose Setting File", fileList, funcList);
+
+	loadSettingsMenu.processMenu();
+
 }
 
 void recordPosition(json& saveSpot, bool appendBack = false, bool getHeading = false) {
@@ -644,7 +624,7 @@ void recordPosition(json& saveSpot, bool appendBack = false, bool getHeading = f
 		hintLine.drawVertical(0);
 		if (IsKeyJustUp(VK_NUMPAD5)) {
 			if (!getHeading) {
-				Vector3 centerCoords;
+				Vector3d centerCoords;
 				getEntityMotion(PLAYER::PLAYER_PED_ID(), &centerCoords);
 				json coords_j = { centerCoords.x, centerCoords.y, centerCoords.z };
 				if (appendBack == false) {
@@ -669,9 +649,19 @@ void recordPosition(json& saveSpot, bool appendBack = false, bool getHeading = f
 }
 
 void saveSettings() {
-	std::ofstream config("settings.json");
-	config << settings;
-	config.close();
+	std::string fileName = getKeyboardInput();
+	if (fileName == "") {
+		fileName = settingFile;
+	}
+	else {
+		settingFile = settingsDirectory + "/" + fileName;
+	}
+	std::ofstream config(settingFile);
+	if (config.is_open()) {
+		outputDebugMessage("Save to file " + fileName);
+		config << settings;
+		config.close();
+	}
 }
 
 void setCenterCoords() {
@@ -721,8 +711,12 @@ void clearScriptPedsEndPoints() {
 
 void modifySettings() {
 
-	Menu createSettingsMenu("Modify Settings",
-		{	"Save Settings to File",
+	if (settings.empty()) {
+		loadSettings();
+	}
+
+	Menu modifySettingsMenu("Modify Settings",
+		{ "Save Settings to File",
 			"Center Coords",
 			"Add carStartPosition",
 			"Clear carStartPositions",
@@ -731,21 +725,17 @@ void modifySettings() {
 			"Add One Set of scriptPedsEndPoints",
 			"Clear scriptPedsEndPoints"
 		},
-	{	saveSettings,
-		setCenterCoords,
-		addCarStartPosition,
-		clearCarStartPositions,
-		setCarHeading,
-		setWanderPedsGenArea,
-		addScriptPedsEndPoints,
-		clearScriptPedsEndPoints
-	});
+		{ saveSettings,
+			setCenterCoords,
+			addCarStartPosition,
+			clearCarStartPositions,
+			setCarHeading,
+			setWanderPedsGenArea,
+			addScriptPedsEndPoints,
+			clearScriptPedsEndPoints
+		});
 
-	if (settings.empty()) {
-		loadSettings();
-	}
-
-	createSettingsMenu.processMenu();
+	modifySettingsMenu.processMenu();
 }
 
 void loadPredictions(std::unordered_map<int, std::unordered_map <int, Vector2>>& coordsMap) {
@@ -795,7 +785,7 @@ void replay() {
 		record.ignore(1000, ',');
 
 		int id;
-		Vector3 coords3D;
+		Vector3d coords3D;
 		float heading;
 		//float speed;
 
@@ -885,8 +875,8 @@ void replay() {
 				}
 				Ped driver = createdDrivers[i];
 
-				 ENTITY::SET_ENTITY_COORDS_NO_OFFSET(v, coords3D.x, coords3D.y, coords3D.z, 1, 0, 0);
-				 ENTITY::SET_ENTITY_HEADING(v, heading);
+				ENTITY::SET_ENTITY_COORDS_NO_OFFSET(v, coords3D.x, coords3D.y, coords3D.z, 1, 0, 0);
+				ENTITY::SET_ENTITY_HEADING(v, heading);
 
 				// AI::TASK_VEHICLE_DRIVE_TO_COORD(driver, v, coords3D.x, coords3D.y, coords3D.z, speed, 0, GAMEPLAY::GET_HASH_KEY((char *)(settings["carModel"].get<std::string>().c_str())), 786475, 0.2, 1.0);
 			}
@@ -936,15 +926,15 @@ void replay() {
 void main() {
 
 	Menu mainMenu("Main Menu",
-		{	"Sample Points",
+		{ "Sample Points",
 			"Teleport to Scene",
-			"Toggle Camera", 
+			"Toggle Camera",
 			"Start Simulation",
-			"Modify Settings", 
+			"Modify Settings",
 			"Load Settings",
 			"Replay"
 		},
-		{	processSampling,
+		{ processSampling,
 			teleport,
 			toggleCamera,
 			startSimulation,

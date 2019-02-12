@@ -21,6 +21,8 @@
     <ClInclude Include="graphics.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Menu.h" />
+    <ClInclude Include="myEnums.h" />
+    <ClInclude Include="myTypes.h" />
     <ClInclude Include="script.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -50,6 +52,7 @@
     <TargetExt>.asi</TargetExt>
     <OutDir>bin\$(Configuration)\</OutDir>
     <IntDir>tmp\$(Configuration)\</IntDir>
+    <IncludePath>C:\Third-Party Libraries\CPlusPlus\inlcude;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

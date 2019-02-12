@@ -1,20 +1,30 @@
-﻿  script.cpp
-c:\xufan gta\datasampler\datasampler\script.cpp(118): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(124): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(129): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(134): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(139): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(147): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(167): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(373): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(393): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(463): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(464): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(467): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\xufan gta\datasampler\datasampler\script.cpp(472): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+﻿  Menu.cpp
+c:\xufan gta\datasampler\datasampler\menu.cpp(20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\menu.cpp(38): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\menu.cpp(48): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\xufan gta\datasampler\datasampler\menu.cpp(52): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\xufan gta\datasampler\datasampler\menu.cpp(52): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\xufan gta\datasampler\datasampler\menu.cpp(56): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\xufan gta\datasampler\datasampler\menu.cpp(87): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  graphics.cpp
+  main.cpp
+  script.cpp
+c:\xufan gta\datasampler\datasampler\script.cpp(119): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(125): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(130): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(135): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(140): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(148): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(168): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(376): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(398): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(457): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(458): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(461): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\xufan gta\datasampler\datasampler\script.cpp(462): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
   Generating code
-  7 of 3635 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    12 functions had inline decision re-evaluated but remain unchanged
+  147 of 3689 functions ( 4.0%) were compiled, the rest were copied from previous compilation.
+    89 functions were new in current compilation
+    139 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   DataSampler.vcxproj -> C:\Xufan GTA\DataSampler\DataSampler\bin\Release\DataSampler.asi

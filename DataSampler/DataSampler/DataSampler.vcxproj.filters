@@ -24,6 +24,8 @@
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="graphics.h" />
+    <ClInclude Include="myTypes.h" />
+    <ClInclude Include="myEnums.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">

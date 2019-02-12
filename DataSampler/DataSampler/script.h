@@ -11,12 +11,26 @@
 
 #include "..\..\inc\main.h"
 
+#include "myEnums.h"
+#include "myTypes.h"
 #include "graphics.h"
+#include "keyboard.h"
+#include "menu.h"
+
+#include <string>
+#include <ctime>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <utility>
+#include <tuple>
+#include <unordered_map>
+#include <Windows.h>
+#include <functional>
+
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 void ScriptMain();
-
-enum modelType : int
-{
-	MODEL_PED,
-	MODEL_VEH
-};
