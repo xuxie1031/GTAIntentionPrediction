@@ -7,3 +7,6 @@ venv
 LeftTurn1
 RightTurn1
 Straight1
+
+record*
+*.pth.tar

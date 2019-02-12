@@ -38,7 +38,7 @@ def parse_file_trajs(filename, args, delim=','):
             agent_end = frames.index(curr_agent_seq[-1, 0])-idx+1
             if agent_end-agent_front != seq_len: continue
             
-            curr_agent_seq = np.transpose(curr_agent_seq[:, 2:4])
+            curr_agent_seq = np.transpose(curr_agent_seq[:, 4:6])
             _idx = num_nodes
             curr_seq[_idx, :, agent_front:agent_end] = curr_agent_seq
             curr_ids[_idx] = agent_id

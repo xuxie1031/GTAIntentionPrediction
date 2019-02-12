@@ -6,6 +6,7 @@ import time
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), '..', 'graph_lstm'))
+from glob import glob
 
 from utils import *
 from eval_utils import *
@@ -65,6 +66,7 @@ def eval_model(data_dir, net, args):
                 num_nodes = num_nodes_seq_list[idx]
 
                 data = torch.from_numpy(data).type(torch.float).permute(2, 0, 1)
+                ids = torch.from_numpy(ids)
 
                 if args.use_cuda:
                     data = data.cuda()
@@ -83,6 +85,8 @@ def eval_model(data_dir, net, args):
                 ret_seq = sample(net, veh_input_data, ped_input_data, ped_pred_data, veh_num_nodes, ped_num_nodes, args)
 
                 veh_pred_data = data_revert(veh_pred_data, first_values_dict)
+                ret_seq = data_revert(ret_seq, first_values_dict)
+
                 error = final_displacement_error(ret_seq[-1], veh_pred_data[-1])
                 print('file {}, seq_id {}, error = {}'.format(all_eval_files[eid], idx, error.item()))
 
@@ -93,12 +97,47 @@ def eval_model(data_dir, net, args):
 
                 final_frame = frames[-1]
                 for i in range(len(veh_ids)):
-                    eval_f.write(str(final_frame)+','+str(veh_ids[i])+','+str(veh_pred_data[-1, i, 0]+','+str(veh_pred_data[-1, i, 1]+'\n')))
+                    eval_f.write(str(final_frame)+','+str(veh_ids[i])+','+str(veh_pred_data[-1, i, 0])+','+str(veh_pred_data[-1, i, 1])+'\n')
         eval_f.close()
 
 
 def main():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument('--input_size', type=int, default=2)
+    parser.add_argument('--output_size', type=int, default=5)
+    parser.add_argument('--dyn_veh_embedding_size', type=int, default=8)
+    parser.add_argument('--dyn_ped_embedding_size', type=int, default=8)
+    parser.add_argument('--graph_veh_embedding_size', type=int, default=8)
+    parser.add_argument('--graph_ped_embedding_size', type=int, default=8)
+    parser.add_argument('--graph_veh_hidden_size', type=int, default=16)
+    parser.add_argument('--graph_ped_hidden_size', type=int, default=16)
+    parser.add_argument('--mat_veh_hidden_size', type=int, default=16)
+    parser.add_argument('--mat_ped_hidden_size', type=int, default=16)
+    parser.add_argument('--cell_hidden_size', type=int, default=64)
+    parser.add_argument('--obs_len', type=int, default=8)
+    parser.add_argument('--pred_len', type=int, default=12)
+    parser.add_argument('--lr', type=float, default=.003)
+    parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--gru', action='store_true', default=True)
+    parser.add_argument('--use_cuda', action='store_true', default=True)
+    parser.add_argument('--path_checkpt', type=str, default='../graph_lstm/')
+
+    args = parser.parse_args()
+
+    net = GraphLSTM(args)
+    optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
+
+    model_name = 'graph_lstm.pth.tar'
+    state = torch.load(os.path.join(args.path_checkpt, model_name))
+    net.load_state_dict(state['network_dict'])
+    optimizer.load_state_dict(state['opt_dict'])
+
+    data_dir = os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'eval')
+    for file in glob(os.path.join(data_dir, '*_eval')):
+        os.remove(file)
+
+    eval_model(data_dir, net, args)
 
 
 if __name__ == '__main__':

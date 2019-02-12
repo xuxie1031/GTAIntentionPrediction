@@ -52,6 +52,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     model_name = 'graph_lstm.pth.tar'
 
     if args.bload:
+        print('loading check pt ...')
         state = torch.load(os.path.join(args.save_path, model_name))
         net.load_state_dict(state['network_dict'])
         optimizer.load_state_dict(state['opt_dict'])
@@ -199,7 +200,7 @@ def main():
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--save_checkpt', type=int, default=1)
     parser.add_argument('--save_path', type=str, default='.')
-    parser.add_argument('--bload', type='store_true', default=False)
+    parser.add_argument('--bload', action='store_true', default=False)
     
     args = parser.parse_args()
 
