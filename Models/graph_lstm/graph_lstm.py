@@ -33,7 +33,7 @@ class GraphLSTM(nn.Module):
         
         self.graph_ped_cell = nn.LSTMCell(self.graph_ped_embedding_size, self.graph_ped_hidden_size)
         if self.gru:
-            self.graph_ped_cell = nn.LSTMCell(self.graph_ped_embedding_size, self.graph_ped_hidden_size)
+            self.graph_ped_cell = nn.GRUCell(self.graph_ped_embedding_size, self.graph_ped_hidden_size)
 
         self.dyn_veh_embedding_layer = nn.Linear(self.input_size, self.dyn_veh_embedding_size)
         self.dyn_ped_embedding_layer = nn.Linear(self.input_size, self.dyn_ped_embedding_size)

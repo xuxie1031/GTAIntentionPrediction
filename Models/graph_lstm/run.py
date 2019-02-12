@@ -50,9 +50,12 @@ def exec_model(dataloader_train, dataloader_test, args):
     net = GraphLSTM(args)
 
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=1.0)
 
+    err_epochs = []
     for epoch in range(args.num_epochs):
         print('****** Training beginning ******')
+        scheduler.step()
         loss_epoch = 0
 
         num_batch = 0
@@ -155,31 +158,33 @@ def exec_model(dataloader_train, dataloader_test, args):
             print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
 
         err_epoch /= num_batch
+        err_epochs.append(err_epoch)
         print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
+        print(err_epochs)
 
-
+# lr:.003, grad_clip: 1.0, dropout: 0.5
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--input_size', type=int, default=2)
     parser.add_argument('--output_size', type=int, default=5)
-    parser.add_argument('--dyn_veh_embedding_size', type=int, default=32)
-    parser.add_argument('--dyn_ped_embedding_size', type=int, default=32)
-    parser.add_argument('--graph_veh_embedding_size', type=int, default=32)
-    parser.add_argument('--graph_ped_embedding_size', type=int, default=32)
-    parser.add_argument('--graph_veh_hidden_size', type=int, default=64)
-    parser.add_argument('--graph_ped_hidden_size', type=int, default=64)
-    parser.add_argument('--mat_veh_hidden_size', type=int, default=64)
-    parser.add_argument('--mat_ped_hidden_size', type=int, default=64)
-    parser.add_argument('--cell_hidden_size', type=int, default=128)
+    parser.add_argument('--dyn_veh_embedding_size', type=int, default=8)
+    parser.add_argument('--dyn_ped_embedding_size', type=int, default=8)
+    parser.add_argument('--graph_veh_embedding_size', type=int, default=8)
+    parser.add_argument('--graph_ped_embedding_size', type=int, default=8)
+    parser.add_argument('--graph_veh_hidden_size', type=int, default=16)
+    parser.add_argument('--graph_ped_hidden_size', type=int, default=16)
+    parser.add_argument('--mat_veh_hidden_size', type=int, default=16)
+    parser.add_argument('--mat_ped_hidden_size', type=int, default=16)
+    parser.add_argument('--cell_hidden_size', type=int, default=64)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--obs_len', type=int, default=8)
     parser.add_argument('--pred_len', type=int, default=12)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--lr', type=float, default=.003)
     parser.add_argument('--grad_clip', type=float, default=10.0)
-    parser.add_argument('--gru', action='store_true', default=False)
+    parser.add_argument('--gru', action='store_true', default=True)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=1000)
 

@@ -2,4 +2,8 @@
 *.pyc
 *.txt
 *.csv
+
 venv
+LeftTurn1
+RightTurn1
+Straight1
