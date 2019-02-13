@@ -15,7 +15,9 @@
 #include "myTypes.h"
 #include "graphics.h"
 #include "keyboard.h"
-#include "menu.h"
+#include "Menu.h"
+#include "GameResources.h"
+// #include "Settings.h"
 
 #include <string>
 #include <ctime>

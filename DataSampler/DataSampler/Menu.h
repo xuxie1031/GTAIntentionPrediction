@@ -3,8 +3,8 @@
 #include <vector>
 #include <functional>
 
-#include "script.h"
 #include "graphics.h"
+#include "keyboard.h"
 
 class Menu {
 public:

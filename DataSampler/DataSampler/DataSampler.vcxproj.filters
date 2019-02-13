@@ -6,6 +6,7 @@
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="graphics.cpp" />
+    <ClCompile Include="GameResources.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="script.h" />
@@ -26,6 +27,7 @@
     <ClInclude Include="graphics.h" />
     <ClInclude Include="myTypes.h" />
     <ClInclude Include="myEnums.h" />
+    <ClInclude Include="GameResources.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">

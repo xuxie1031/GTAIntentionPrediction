@@ -1,5 +1,12 @@
 #pragma once
-#include "script.h"
+#include "..\..\inc\natives.h"
+#include "..\..\inc\types.h"
+#include "..\..\inc\enums.h"
+#include "..\..\inc\main.h"
+
+#include "myTypes.h"
+#include "myEnums.h"
+
 #include <string>
 
 void draw_rect(float A_0, float A_1, float A_2, float A_3, int A_4, int A_5, int A_6, int A_7);

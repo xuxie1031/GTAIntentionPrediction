@@ -7,6 +7,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="GameResources.cpp" />
     <ClCompile Include="graphics.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="main.cpp" />
@@ -18,6 +19,7 @@
     <ClInclude Include="..\..\inc\enums.h" />
     <ClInclude Include="..\..\inc\natives.h" />
     <ClInclude Include="..\..\inc\types.h" />
+    <ClInclude Include="GameResources.h" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Menu.h" />

@@ -80,7 +80,7 @@ void draw_menu_line(std::string caption, float lineWidth, float lineHeight, floa
 }
 
 void printOnScreen(std::string s) {
-	DWORD maxTickCount = GetTickCount() + 1000;
+	DWORD maxTickCount = GetTickCount() + 5000;
 	while (GetTickCount() < maxTickCount) {
 		draw_menu_line(s, 350.0, 15.0, 15, 400, 5.0, false, true);
 		WAIT(0);
@@ -90,13 +90,13 @@ void printOnScreen(std::string s) {
 
 void draw_mark_at(Vector2 coords, int r, int g, int b)
 {
-	float side = 10;
+	float sideLen = 10;
 
 	int screen_w, screen_h;
 	GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
 
-	GRAPHICS::DRAW_RECT((coords.x - side/2)/screen_w, (coords.y - side/2)/screen_h,
-		side/screen_w, side/screen_h, r, g, b, 255);
+	GRAPHICS::DRAW_RECT((coords.x - sideLen/2)/screen_w, (coords.y - sideLen/2)/screen_h,
+		sideLen/screen_w, sideLen/screen_h, r, g, b, 255);
 }
 
 
