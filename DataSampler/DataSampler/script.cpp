@@ -8,20 +8,6 @@ const std::string settingsDirectory = "RecordSettings";
 json settings;
 std::string settingFile;
 
-void outputDebugMessage(std::string s) {
-	static bool initialized = false;
-	if (initialized = false) {
-		initialized = true;
-		remove("debug.txt");
-	}
-
-	std::ofstream debug("debug.txt", std::fstream::app);
-	DWORD t = GetTickCount();
-
-	debug << t << ": " << s << std::endl;
-	debug.close();
-}
-
 std::vector<std::string> readAllFiles(std::string folder)
 {
 	std::vector<std::string> res;
@@ -87,7 +73,7 @@ void getEntityMotion(Entity e, Vector3d* coords3D = NULL, Vector2* coords2D = NU
 
 }
 
-std::string showCoords() {
+std::string showPlayerCoords() {
 	Player e = PLAYER::PLAYER_PED_ID();
 	Vector3d coords3D;
 	Vector2 coords2D;
@@ -125,7 +111,7 @@ void processSampling() {
 	while (true) {
 		clearArea();
 		hintLine.drawVertical(0);
-		std::string coords = showCoords();
+		std::string coords = showPlayerCoords();
 		if (IsKeyJustUp(VK_NUMPAD5)) {
 			std::string label = getTextInput();
 			if (label != "")
@@ -230,6 +216,7 @@ void setCars() {
 	float carLength = getModelLength(settings["carModel"].get<std::string>().c_str());
 	outputDebugMessage("carLength is " + std::to_string(carLength));
 
+	// randomly distribute cars on each lane
 	std::vector<int> numCars(settings["carStartPositions"].size(), 0);
 	int totalCars = randomNum((int)settings["minTotalCars"], settings["maxTotalCars"]);
 	for (int i = 0; i < totalCars; i++) {

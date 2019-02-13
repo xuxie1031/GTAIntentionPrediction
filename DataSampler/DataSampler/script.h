@@ -5,11 +5,11 @@
 			*/
 #pragma once
 
-#include "..\..\inc\natives.h"
-#include "..\..\inc\types.h"
-#include "..\..\inc\enums.h"
+#include "inc\natives.h"
+#include "inc\types.h"
+#include "inc\enums.h"
 
-#include "..\..\inc\main.h"
+#include "inc\main.h"
 
 #include "myEnums.h"
 #include "myTypes.h"
@@ -17,6 +17,7 @@
 #include "keyboard.h"
 #include "Menu.h"
 #include "GameResources.h"
+#include "debug.h"
 // #include "Settings.h"
 
 #include <string>
@@ -31,7 +32,7 @@
 #include <Windows.h>
 #include <functional>
 
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 

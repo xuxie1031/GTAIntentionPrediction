@@ -7,31 +7,39 @@
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="graphics.cpp" />
     <ClCompile Include="GameResources.cpp" />
+    <ClCompile Include="debug.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="script.h" />
-    <ClInclude Include="..\..\inc\types.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\enums.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\natives.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\main.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="myTypes.h" />
     <ClInclude Include="myEnums.h" />
     <ClInclude Include="GameResources.h" />
+    <ClInclude Include="debug.h" />
+    <ClInclude Include="inc\enums.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\main.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\natives.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="nlohmann\json.hpp">
+      <Filter>nlohmann</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">
       <UniqueIdentifier>{fe82bd4a-2d14-486a-8be5-8bf6b50a2414}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nlohmann">
+      <UniqueIdentifier>{e18e2467-be5b-4337-937b-4c7d543ade70}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

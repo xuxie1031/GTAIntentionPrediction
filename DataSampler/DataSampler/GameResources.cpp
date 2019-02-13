@@ -1,4 +1,4 @@
-#include "GameResources.h"
+#include "gameResources.h"
 
 std::vector<Vehicle> createdVehicles;
 std::vector<Ped> createdDrivers;

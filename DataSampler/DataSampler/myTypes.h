@@ -1,6 +1,6 @@
 #pragma once
-#include "../../inc/types.h"
-#include <nlohmann/json.hpp>
+#include "inc/types.h"
+#include "nlohmann/json.hpp"
 #include <stdexcept>
 
 using json = nlohmann::json;

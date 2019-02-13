@@ -1,8 +1,8 @@
 #pragma once
-#include "..\..\inc\natives.h"
-#include "..\..\inc\types.h"
-#include "..\..\inc\enums.h"
-#include "..\..\inc\main.h"
+#include "inc\natives.h"
+#include "inc\types.h"
+#include "inc\enums.h"
+#include "inc\main.h"
 
 #include "myTypes.h"
 #include "myEnums.h"

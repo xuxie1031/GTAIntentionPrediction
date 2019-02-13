@@ -13,8 +13,15 @@ Menu::Menu(const std::string& caption, const std::vector<std::string>& lines, co
 	mFunctions = functions;
 	mLines = lines;
 	mMaxWidth = 250;
+	size_t lineLen;
+
+	lineLen = caption.length() * 15;
+	if (lineLen > mMaxWidth) {
+		mMaxWidth = lineLen;
+	}
+
 	for (int i = 0; i < mLines.size(); i++) {
-		size_t lineLen = mLines[i].length() * 15;
+		lineLen = mLines[i].length() * 15;
 		if (lineLen > mMaxWidth) {
 			mMaxWidth = lineLen;
 		}
