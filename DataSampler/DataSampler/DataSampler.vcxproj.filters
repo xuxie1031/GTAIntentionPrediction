@@ -8,6 +8,8 @@
     <ClCompile Include="graphics.cpp" />
     <ClCompile Include="GameResources.cpp" />
     <ClCompile Include="debug.cpp" />
+    <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="Selector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="script.h" />
@@ -33,6 +35,7 @@
     <ClInclude Include="nlohmann\json.hpp">
       <Filter>nlohmann</Filter>
     </ClInclude>
+    <ClInclude Include="Settings.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">

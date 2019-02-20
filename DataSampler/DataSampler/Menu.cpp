@@ -13,6 +13,7 @@ Menu::Menu(const std::string& caption, const std::vector<std::string>& lines, co
 	mFunctions = functions;
 	mLines = lines;
 	mMaxWidth = 250;
+	oneTimeSelection = false;
 	size_t lineLen;
 
 	lineLen = caption.length() * 15;
@@ -83,6 +84,8 @@ void Menu::processMenu() {
 		if (bSelect)
 		{
 			mFunctions[lineActive]();
+			if (oneTimeSelection)
+				break;
 			waitTime = 200;
 		}
 		else if (bBack) {

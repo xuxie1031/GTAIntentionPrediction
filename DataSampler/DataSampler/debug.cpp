@@ -1,13 +1,18 @@
 #include "debug.h"
 
 void outputDebugMessage(std::string s) {
+
+	std::string logFile = "DataSampler.log";
+	std::ofstream debug;
+
 	static bool initialized = false;
 	if (initialized = false) {
 		initialized = true;
-		remove("debug.txt");
+		debug.open(logFile);
 	}
-
-	std::ofstream debug("debug.txt", std::fstream::app);
+	else {
+		debug.open(logFile, std::fstream::app);
+	}
 	DWORD t = GetTickCount();
 
 	debug << t << ": " << s << std::endl;

@@ -12,9 +12,11 @@ public:
 	size_t lineCount();
 	void drawVertical(int lineActive);
 	void processMenu();
+	bool oneTimeSelection;
 
 private:
 	std::string makeLine(std::string text, bool *pState);
+
 	int mMaxWidth;
 	std::string mCaption;
 	std::vector<std::string> mLines;

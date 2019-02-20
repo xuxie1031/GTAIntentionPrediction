@@ -18,7 +18,7 @@ extern std::vector<TaskSequence> createdPedSequences;
 
 Entity spawnAtCoords(LPCSTR modelName, int modelType, Vector3d coords, float heading = 0.0);
 Ped spawnDriver(Vehicle vehicle, LPCSTR modelName);
-TaskSequence createTaskSequence(Ped p, std::function<void()> actionItem);
+TaskSequence createTaskSequence(Ped p, std::function<void()> actionItem, bool isDriver);
 void deleteAllCreated();
 void deleteCar(int i);
 void deletePed(int i);

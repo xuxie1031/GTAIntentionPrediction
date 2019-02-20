@@ -65,13 +65,18 @@ Ped spawnDriver(Vehicle vehicle, LPCSTR modelName) {
 	return p;
 }
 
-TaskSequence createTaskSequence(Ped p, std::function<void()> actionItem) {
+TaskSequence createTaskSequence(Ped p, std::function<void()> actionItem, bool isDriver) {
 	TaskSequence sequence = 0;
 	AI::OPEN_SEQUENCE_TASK(&sequence);
 	actionItem();
 	AI::CLOSE_SEQUENCE_TASK(sequence);
 	AI::TASK_PERFORM_SEQUENCE(p, sequence);
-	createdPedSequences.push_back(sequence);
+	if (isDriver) {
+		createdCarSequences.push_back(sequence);
+	}
+	else {
+		createdPedSequences.push_back(sequence);
+	}
 	return sequence;
 }
 

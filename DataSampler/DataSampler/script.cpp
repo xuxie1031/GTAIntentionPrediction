@@ -42,6 +42,11 @@ float getModelLength(LPCSTR modelName) {
 	return max.y - min.y;
 }
 
+void resetPlayer() {
+	ENTITY::SET_ENTITY_COLLISION(PLAYER::PLAYER_PED_ID(), 1, 1);
+	PED::SET_PED_GRAVITY(PLAYER::PLAYER_PED_ID(), 1);
+}
+
 void clearArea() {
 	GAMEPLAY::CLEAR_AREA_OF_PEDS(0, 0, 0, 10000, 1);
 	GAMEPLAY::CLEAR_AREA_OF_VEHICLES(0, 0, 0, 10000, false, false, false, false, false);
@@ -141,6 +146,7 @@ void processRecording(std::vector<std::string> fileName, std::function<bool()> d
 		CreateDirectory(dirName.c_str(), NULL);
 	}
 	record.open(dirName + "/" + fileName.back());
+	outputDebugMessage("Logging into file " + dirName + "/" + fileName.back());
 
 	int count = 0;
 	int carID = 0;
@@ -167,7 +173,7 @@ void processRecording(std::vector<std::string> fileName, std::function<bool()> d
 
 			record << count << "," << IDMap[e] << "," << coords2D.x << "," << coords2D.y << "," << coords3D.x << "," << coords3D.y << "," << coords3D.z << "," << heading << std::endl;
 		}
-		if (seeACar || count != 0) {
+		if (seeACar) {
 			for (int i = 0; i < createdPeds.size(); i++) {
 				Entity e = createdPeds[i];
 				if (!IDMap.count(e)) {
@@ -193,6 +199,10 @@ void processRecording(std::vector<std::string> fileName, std::function<bool()> d
 		WAIT(waitTime);
 		if (!seeACar && count == 0)
 			continue;
+		if (!seeACar && count != 0) {
+			outputDebugMessage("Car has passed. Break.");
+			break;
+		}
 		count++;
 	}
 	record.close();
@@ -206,7 +216,7 @@ void teleport() {
 
 	Ped p = PLAYER::PLAYER_PED_ID();
 	Vector3d coords = settings["centerCoords"];
-	ENTITY::SET_ENTITY_COORDS(p, coords.x, coords.y, coords.z, 1, 0, 0, 1);
+	ENTITY::SET_ENTITY_COORDS(p, coords.x, coords.y, coords.z + 5.0, 1, 0, 0, 1);
 }
 
 void setCars() {
@@ -248,7 +258,7 @@ void setCars() {
 
 			createTaskSequence(driver, [&]() {
 				AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, goal.x, goal.y, goal.z, speed, 0, GAMEPLAY::GET_HASH_KEY((char *)(settings["carModel"].get<std::string>().c_str())), settings["driveStyle"], settings["carStopRange"], 1.0);
-			});
+			}, true);
 
 			start = (back - front) * ratio + start;
 			WAIT(0);
@@ -289,7 +299,7 @@ void setWanderPed() {
 			Vector3d centerCoords = settings["centerCoords"];
 			AI::TASK_WANDER_IN_AREA(0, centerCoords.x, centerCoords.y, centerCoords.z, walkRadius, 0.0, 0.0);
 			//AI::TASK_WANDER_STANDARD(p, 10.0, 10);
-		});
+		}, false);
 
 		WAIT(0);
 	}
@@ -327,93 +337,12 @@ void setScriptPed(bool onlyOnce = false) {
 
 		createTaskSequence(p, [&]() {
 			AI::TASK_GO_STRAIGHT_TO_COORD(0, end.x, end.y, end.z, 1.0, 200000, 0.0, 0.2);
-		});
+		}, false);
 
 		WAIT(0);
 	}
 }
 
-void startSimulation() {
-
-	if (settings.empty()) {
-		return;
-	}
-
-	DWORD nextTickCount;
-	bool isPedInjured;
-	bool forceBreak;
-
-	auto delegate = [&]() {
-		clearArea();
-
-		if (settings["continuousPedGen"]) {
-			if (GetTickCount() >= nextTickCount) {
-				setScriptPed(true);
-				nextTickCount = GetTickCount() + randomNum((int)settings["minPedGenInterval"], settings["maxPedGenInterval"]);
-			}
-		}
-
-		for (int i = 0; i < createdVehicles.size(); i++) {
-			if (PED::IS_PED_INJURED(createdDrivers[i])) {
-				isPedInjured = true;
-				return false;
-			}
-			if (AI::GET_SEQUENCE_PROGRESS(createdDrivers[i]) == -1) {
-				deleteCar(i);
-				i--;
-			}
-		}
-
-		for (int i = 0; i < createdPeds.size(); i++) {
-			if (PED::IS_PED_INJURED(createdPeds[i])) {
-				isPedInjured = true;
-				return false;
-			}
-			if (AI::GET_SEQUENCE_PROGRESS(createdPeds[i]) == -1) {
-				deletePed(i);
-				i--;
-			}
-		}
-		if (IsKeyJustUp(VK_NUMPAD0)) {
-			forceBreak = true;
-			return false;
-		}
-
-		if (createdVehicles.size() == 0) {
-			return false;
-		}
-		return true;
-	};
-
-	for (int i = 0; i < 100; i++) {
-		outputDebugMessage("start simulation " + std::to_string(i) + ".");
-		clearArea();
-		outputDebugMessage("clearArea complete.");
-		setCars();
-		outputDebugMessage("setCars complete.");
-		setWanderPed();
-		outputDebugMessage("setWanderPed complete.");
-		setScriptPed();
-		outputDebugMessage("setScriptPed complete.");
-		nextTickCount = GetTickCount();
-		isPedInjured = false;
-		forceBreak = false;
-		json recordFile = settings["recordDirectory"];
-		recordFile.push_back("record" + std::to_string(i));
-		processRecording(recordFile, delegate, settings["period"]);
-		outputDebugMessage("setScriptPed complete.");
-		deleteAllCreated();
-		outputDebugMessage("deleteAll complete.");
-		WAIT(0);
-		if (isPedInjured) {
-			i--;
-		}
-		if (forceBreak) {
-			break;
-		}
-	}
-
-}
 
 void toggleCamera() {
 
@@ -446,6 +375,147 @@ void toggleCamera() {
 	}
 	active = !active;
 }
+
+void startSimulation() {
+
+	if (settings.empty()) {
+		return;
+	}
+
+	DWORD nextTickCount;
+	bool isPedInjured;
+	bool forceBreak;
+
+	auto delegate = [&]() {
+		clearArea();
+
+		if (settings["continuousPedGen"]) {
+			if (GetTickCount() >= nextTickCount) {
+				setScriptPed(true);
+				nextTickCount = GetTickCount() + randomNum((int)settings["minPedGenInterval"], settings["maxPedGenInterval"]);
+			}
+		}
+
+		for (int i = 0; i < createdVehicles.size(); i++) {
+			if (PED::IS_PED_INJURED(createdDrivers[i])) {
+				outputDebugMessage("Ped injured. Break.");
+				isPedInjured = true;
+				return false;
+			}
+			if (AI::GET_SEQUENCE_PROGRESS(createdDrivers[i]) == -1) {
+				outputDebugMessage("Deleting Car " + std::to_string(i));
+				deleteCar(i);
+				i--;
+			}
+		}
+
+		for (int i = 0; i < createdPeds.size(); i++) {
+			if (PED::IS_PED_INJURED(createdPeds[i])) {
+				outputDebugMessage("Ped injured. Break.");
+				isPedInjured = true;
+				return false;
+			}
+			if (AI::GET_SEQUENCE_PROGRESS(createdPeds[i]) == -1) {
+				outputDebugMessage("Deleting Ped " + std::to_string(i));
+				deletePed(i);
+				i--;
+			}
+		}
+		if (IsKeyJustUp(VK_NUMPAD0)) {
+			outputDebugMessage("Force break.");
+			forceBreak = true;
+			return false;
+		}
+
+		if (createdVehicles.size() == 0) {
+			outputDebugMessage("No vehicles. Stop.");
+			return false;
+		}
+		return true;
+	};
+
+
+	std::string curType = "straight";
+
+	std::string curConfig = "_nw_250";
+
+	for (int i = 0; i < 100; i++) {
+		if (true) {
+			outputDebugMessage("start simulation " + std::to_string(i) + ".");
+			clearArea();
+			outputDebugMessage("clearArea complete.");
+			setCars();
+			outputDebugMessage("setCars complete.");
+			setWanderPed();
+			outputDebugMessage("setWanderPed complete.");
+			setScriptPed();
+			outputDebugMessage("setScriptPed complete.");
+			nextTickCount = GetTickCount();
+			isPedInjured = false;
+			forceBreak = false;
+			json recordFile = settings["recordDirectory"];
+			recordFile.push_back("record" + std::to_string(i));
+			processRecording(recordFile, delegate, settings["period"]);
+			outputDebugMessage("setScriptPed complete.");
+			deleteAllCreated();
+			outputDebugMessage("deleteAll complete.");
+			WAIT(0);
+			if (isPedInjured) {
+				i--;
+			}
+			if (forceBreak) {
+				break;
+			}
+		}
+		else {
+			int j = randomNum(0, 5);
+			std::string fileName = "RecordSettings/settings-" + curType + std::to_string(j) + curConfig + ".json";
+
+			std::ifstream config(fileName);
+			outputDebugMessage("Loading config file " + fileName);
+			settings = json();
+			config >> settings;
+			config.close();
+			settingFile = fileName;
+
+			outputDebugMessage("start simulation " + std::to_string(i));
+
+			teleport();
+			ENTITY::SET_ENTITY_COLLISION(PLAYER::PLAYER_PED_ID(), 0, 0);
+			PED::SET_PED_GRAVITY(PLAYER::PLAYER_PED_ID(), 0);
+
+			toggleCamera();
+			toggleCamera();
+			clearArea();
+			outputDebugMessage("clearArea complete.");
+			setCars();
+			outputDebugMessage("setCars complete.");
+			setWanderPed();
+			outputDebugMessage("setWanderPed complete.");
+			setScriptPed();
+			outputDebugMessage("setScriptPed complete.");
+			nextTickCount = GetTickCount();
+			isPedInjured = false;
+			forceBreak = false;
+			std::vector<std::string> recordFile = { "[Mix]" + curType + curConfig };
+			recordFile.push_back("[" + std::to_string(j) + "]" + "record" + std::to_string(i));
+			processRecording(recordFile, delegate, settings["period"]);
+			outputDebugMessage("recoding complete.");
+			deleteAllCreated();
+			outputDebugMessage("deleteAll complete.");
+			WAIT(0);
+			if (isPedInjured) {
+				i--;
+			}
+			if (forceBreak) {
+				break;
+			}
+		}
+	}
+
+
+}
+
 
 void loadSettings() {
 	auto fileList = readAllFiles(settingsDirectory);
@@ -595,14 +665,14 @@ void modifySettings() {
 	modifySettingsMenu.processMenu();
 }
 
-void loadPredictions(std::unordered_map<int, std::unordered_map <int, Vector2>>& coordsMap) {
+void loadPredictions(std::unordered_map<int, std::unordered_map <int, std::vector<Vector2>>>& coordsMap) {
 	std::ifstream prediction("record2.csv");
 	int timestamp;
 	while (prediction >> timestamp) {
 		prediction.ignore(1000, ',');
 
 		int id;
-		Vector2 coords;
+		Vector3d coords;
 
 		prediction >> id;
 		prediction.ignore(1000, ',');
@@ -612,9 +682,20 @@ void loadPredictions(std::unordered_map<int, std::unordered_map <int, Vector2>>&
 		prediction >> coords.y;
 		prediction.ignore(1000, ',');
 
+		float searchHeight = 500;
+
+		GAMEPLAY::GET_GROUND_Z_FOR_3D_COORD(coords.x, coords.y, searchHeight, &(coords.z) , 0);
+
+		Vector2 coords2D;
+		GRAPHICS::_WORLD3D_TO_SCREEN2D(coords.x, coords.y, coords.z, &(coords2D.x), &(coords2D.y));
+		int screen_w, screen_h;
+		GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
+		coords2D.x *= screen_w;
+		coords2D.y *= screen_h;
+
 		prediction.ignore(1000, '\n');
 		if (id < PED_ID_OFFSET) {
-			coordsMap[timestamp][id] = coords;
+			coordsMap[timestamp][id].push_back(coords2D);
 		}
 	}
 	prediction.close();
@@ -625,10 +706,12 @@ void replay() {
 		return;
 	}
 
+	int color[][3] = { {255,0,0}, {0,255,0}, {0,0,255} };
+
 	std::ifstream record("record1.csv");
 
 	std::unordered_map<int, std::pair<Entity, bool>> idMap;
-	std::unordered_map<int, std::unordered_map <int, Vector2>> coordsMap;
+	std::unordered_map<int, std::unordered_map <int, std::vector<Vector2>>> coordsMap;
 	loadPredictions(coordsMap);
 
 	int waitTime = 0;
@@ -744,14 +827,18 @@ void replay() {
 				DWORD maxTickCount = GetTickCount() + waitTime;
 				while (GetTickCount() < maxTickCount) {
 					for (auto& p : coordsMap[timestamp]) {
-						draw_mark_at(p.second, 255, 0, 0);
+						for (auto c : p.second) {
+							draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+						}
 					}
 					WAIT(0);
 				}
 			}
 			else {
 				for (auto& p : coordsMap[timestamp]) {
-					draw_mark_at(p.second, 255, 0, 0);
+					for (auto c : p.second) {
+						draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+					}
 				}
 			}
 		}
@@ -771,7 +858,9 @@ void replay() {
 		clearArea();
 		while (GetTickCount() < maxTickCount) {
 			for (auto& p : coordsMap[now]) {
-				draw_mark_at(p.second, 255, 0, 0);
+				for (auto c : p.second) {
+					draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+				}
 			}
 			WAIT(0);
 		}
@@ -781,7 +870,6 @@ void replay() {
 }
 
 void main() {
-
 	Menu mainMenu("Main Menu",
 		{ "Sample Points",
 			"Teleport to Scene",
@@ -789,7 +877,8 @@ void main() {
 			"Start Simulation",
 			"Modify Settings",
 			"Load Settings",
-			"Replay"
+			"Replay",
+			"Reset Player"
 		},
 		{ processSampling,
 			teleport,
@@ -797,7 +886,8 @@ void main() {
 			startSimulation,
 			modifySettings,
 			loadSettings,
-			replay
+			replay,
+			resetPlayer
 		});
 
 	remove("debug.txt");

@@ -14,6 +14,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="script.cpp" />
+    <ClCompile Include="Selector.cpp" />
+    <ClCompile Include="Settings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug.h" />
@@ -29,6 +31,7 @@
     <ClInclude Include="myTypes.h" />
     <ClInclude Include="nlohmann\json.hpp" />
     <ClInclude Include="script.h" />
+    <ClInclude Include="Settings.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7b94409d-a097-44b7-8d81-5814f364d640}</ProjectGuid>
