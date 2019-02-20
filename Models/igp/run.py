@@ -14,7 +14,7 @@ from DataSet import *
 
 def exec_model(dataloader_train, dataloader_test, args):
     # kernel = kernel_mat(args.obs_len+args.pred_len, args.time_scale, args.l, args.sigmaf)
-    ls = np.linspace(1e-6, 0.05, 1000)
+    ls = np.linspace(1e-6, 1e-5, 1)
     sigmafs = np.linspace(1e-6, 50.0, 1000)
     sigmans = np.linspace(1e-6, 50.0, 1000)
 
@@ -103,7 +103,7 @@ def main():
     parser.add_argument('--sigman', type=float, default=5.0)
     parser.add_argument('--alpha_', type=float, default=0.5)
     parser.add_argument('--h', type=float, default=10.0)
-    parser.add_argument('--best_k', type=int, default=200)
+    parser.add_argument('--best_k', type=int, default=100)
 
     args = parser.parse_args()
 

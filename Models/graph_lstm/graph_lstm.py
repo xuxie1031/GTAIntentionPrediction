@@ -62,6 +62,11 @@ class GraphLSTM(nn.Module):
             veh_frame = veh_input_data[i]
             ped_frame = ped_input_data[i]
 
+            # print('veh size')
+            # print(veh_frame.size())
+            # print('ped_size')
+            # print(ped_frame.size())
+
             # self vehicle
             veh_dyn_embedding = self.dropout(self.relu(self.dyn_veh_embedding_layer(veh_frame)))
             # ped_dyn_embedding = self.dropout(self.relu(self.dyn_ped_embedding_layer(ped_frame)))
@@ -95,6 +100,8 @@ class GraphLSTM(nn.Module):
             veh_graph_embedding = torch.stack(veh_other_graph_embedding)
             veh_graph_embedding = torch.mm(veh_graph_embedding, self.w_graph_veh)
 
+            veh_graph_embedding = self.dropout(self.relu(veh_graph_embedding))
+
             # ped
             ped_graph_h = graph_ped_state_tuple[0]
             if not self.gru:
@@ -112,6 +119,8 @@ class GraphLSTM(nn.Module):
 
             ped_graph_embedding = curr_ped_graph_h.sum(dim=0, keepdim=True).repeat(num_nodes, 1)
             ped_graph_embedding = torch.mm(ped_graph_embedding, self.w_graph_ped)
+
+            ped_graph_embedding = self.dropout(self.relu(ped_graph_embedding))
 
             cell_embedding = torch.cat((veh_dyn_embedding, veh_graph_embedding, ped_graph_embedding), dim=1)
 

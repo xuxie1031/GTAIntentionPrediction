@@ -44,7 +44,10 @@ def parse_file_trajs(filename, args, delim=','):
             curr_ids[_idx] = agent_id
             num_nodes += 1
         
-        if num_nodes > 1:
+        count_veh = len(np.argwhere(curr_ids[:num_nodes] < 100))
+        count_ped = len(np.argwhere(curr_ids[:num_nodes] >= 100))
+
+        if num_nodes > 1 and count_veh > 0 and count_ped > 0:
             num_nodes_seq_list.append(num_nodes)
             ids_seq_list.append(curr_ids[:num_nodes])
             seq_list.append(curr_seq[:num_nodes])

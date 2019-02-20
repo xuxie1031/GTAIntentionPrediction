@@ -4,9 +4,7 @@
 *.csv
 
 venv
-LeftTurn1
-RightTurn1
-Straight1
+dataset
 
 record*
 *.pth.tar

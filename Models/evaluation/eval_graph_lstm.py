@@ -82,22 +82,31 @@ def eval_model(data_dir, net, args):
                 ped_pred_data = ped_data[args.obs_len:, :, :]
 
                 veh_num_nodes, ped_num_nodes = veh_input_data.size(1), ped_input_data.size(1)
-                ret_seq = sample(net, veh_input_data, ped_input_data, ped_pred_data, veh_num_nodes, ped_num_nodes, args)
+                k_ret_seq = torch.zeros(args.best_k, args.pred_len, veh_num_nodes, args.input_size)
+                if args.use_cuda:
+                    k_ret_seq = k_ret_seq.cuda()
 
                 veh_pred_data = data_revert(veh_pred_data, first_values_dict)
-                ret_seq = data_revert(ret_seq, first_values_dict)
 
-                error = final_displacement_error(ret_seq[-1], veh_pred_data[-1])
+                error = 0.0
+                for k in range(args.best_k):
+                    ret_seq = sample(net, veh_input_data, ped_input_data, ped_pred_data, veh_num_nodes, ped_num_nodes, args)
+                    ret_seq = data_revert(ret_seq, first_values_dict)
+
+                    k_ret_seq[k] = ret_seq
+                    error += final_displacement_error(ret_seq[-1], veh_pred_data[-1])
+                error /= args.best_k
                 print('file {}, seq_id {}, error = {}'.format(all_eval_files[eid], idx, error.item()))
 
-                veh_pred_data = veh_pred_data.cpu().numpy()
+                k_ret_seq = k_ret_seq.cpu().numpy()
 
                 veh_ids = ids.cpu().numpy()
                 veh_ids = veh_ids[veh_ids < 100]
 
-                final_frame = frames[-1]
+                pred_frame = frames[-args.pred_len]
                 for i in range(len(veh_ids)):
-                    eval_f.write(str(final_frame)+','+str(veh_ids[i])+','+str(veh_pred_data[-1, i, 0])+','+str(veh_pred_data[-1, i, 1])+'\n')
+                    for k in range(args.best_k):
+                        eval_f.write(str(pred_frame)+','+str(veh_ids[i])+','+str(k_ret_seq[k, -1, i, 0])+','+str(k_ret_seq[k, -1, i, 1])+'\n')
         eval_f.close()
 
 
@@ -106,17 +115,18 @@ def main():
 
     parser.add_argument('--input_size', type=int, default=2)
     parser.add_argument('--output_size', type=int, default=5)
-    parser.add_argument('--dyn_veh_embedding_size', type=int, default=8)
-    parser.add_argument('--dyn_ped_embedding_size', type=int, default=8)
-    parser.add_argument('--graph_veh_embedding_size', type=int, default=8)
-    parser.add_argument('--graph_ped_embedding_size', type=int, default=8)
-    parser.add_argument('--graph_veh_hidden_size', type=int, default=16)
-    parser.add_argument('--graph_ped_hidden_size', type=int, default=16)
-    parser.add_argument('--mat_veh_hidden_size', type=int, default=16)
-    parser.add_argument('--mat_ped_hidden_size', type=int, default=16)
-    parser.add_argument('--cell_hidden_size', type=int, default=64)
+    parser.add_argument('--dyn_veh_embedding_size', type=int, default=32)
+    parser.add_argument('--dyn_ped_embedding_size', type=int, default=32)
+    parser.add_argument('--graph_veh_embedding_size', type=int, default=32)
+    parser.add_argument('--graph_ped_embedding_size', type=int, default=32)
+    parser.add_argument('--graph_veh_hidden_size', type=int, default=64)
+    parser.add_argument('--graph_ped_hidden_size', type=int, default=64)
+    parser.add_argument('--mat_veh_hidden_size', type=int, default=64)
+    parser.add_argument('--mat_ped_hidden_size', type=int, default=64)
+    parser.add_argument('--cell_hidden_size', type=int, default=256)
     parser.add_argument('--obs_len', type=int, default=8)
     parser.add_argument('--pred_len', type=int, default=12)
+    parser.add_argument('--best_k', type=int, default=3)
     parser.add_argument('--lr', type=float, default=.003)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--gru', action='store_true', default=True)
