@@ -8,6 +8,7 @@ const std::string settingsDirectory = "RecordSettings";
 json settings;
 std::string settingFile;
 
+
 std::vector<std::string> readAllFiles(std::string folder)
 {
 	std::vector<std::string> res;
@@ -686,16 +687,17 @@ void loadPredictions(std::unordered_map<int, std::unordered_map <int, std::vecto
 
 		GAMEPLAY::GET_GROUND_Z_FOR_3D_COORD(coords.x, coords.y, searchHeight, &(coords.z) , 0);
 
-		Vector2 coords2D;
-		GRAPHICS::_WORLD3D_TO_SCREEN2D(coords.x, coords.y, coords.z, &(coords2D.x), &(coords2D.y));
-		int screen_w, screen_h;
-		GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
-		coords2D.x *= screen_w;
-		coords2D.y *= screen_h;
+		//Vector2 coords2D;
+		//GRAPHICS::_WORLD3D_TO_SCREEN2D(coords.x, coords.y, coords.z, &(coords2D.x), &(coords2D.y));
+		//int screen_w, screen_h;
+		//GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
+		//coords2D.x *= screen_w;
+		//coords2D.y *= screen_h;
 
 		prediction.ignore(1000, '\n');
 		if (id < PED_ID_OFFSET) {
-			coordsMap[timestamp][id].push_back(coords2D);
+			//coordsMap[timestamp][id].push_back(coords2D);
+			coordsMap[timestamp][id].push_back({ (float)coords.x, (float)coords.y });
 		}
 	}
 	prediction.close();
@@ -827,8 +829,16 @@ void replay() {
 				DWORD maxTickCount = GetTickCount() + waitTime;
 				while (GetTickCount() < maxTickCount) {
 					for (auto& p : coordsMap[timestamp]) {
+						//for (auto c : p.second) {
+						//	draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+						//}
+						Entity ent = idMap[p.first].first;
+						Vector3 entPose = ENTITY::GET_ENTITY_COORDS(ent, true);
 						for (auto c : p.second) {
-							draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+							Vector3 forwardVec;
+							forwardVec.x = c.x - entPose.x;
+							forwardVec.y = c.y - entPose.y;
+							draw_quadrant(forwardVec, forwardVec.x, forwardVec.y, entPose, 1, 0);
 						}
 					}
 					WAIT(0);
@@ -836,8 +846,16 @@ void replay() {
 			}
 			else {
 				for (auto& p : coordsMap[timestamp]) {
+					//for (auto c : p.second) {
+					//	draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+					//}
+					Entity ent = idMap[p.first].first;
+					Vector3 entPose = ENTITY::GET_ENTITY_COORDS(ent, true);
 					for (auto c : p.second) {
-						draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+						Vector3 forwardVec;
+						forwardVec.x = c.x - entPose.x;
+						forwardVec.y = c.y - entPose.y;
+						draw_quadrant(forwardVec, forwardVec.x, forwardVec.y, entPose, 1, 0);
 					}
 				}
 			}
@@ -858,8 +876,16 @@ void replay() {
 		clearArea();
 		while (GetTickCount() < maxTickCount) {
 			for (auto& p : coordsMap[now]) {
+				//for (auto c : p.second) {
+				//	draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+				//}
+				Entity ent = idMap[p.first].first;
+				Vector3 entPose = ENTITY::GET_ENTITY_COORDS(ent, true);
 				for (auto c : p.second) {
-					draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
+					Vector3 forwardVec;
+					forwardVec.x = c.x - entPose.x;
+					forwardVec.y = c.y - entPose.y;
+					draw_quadrant(forwardVec, forwardVec.x, forwardVec.y, entPose, 1, 0);
 				}
 			}
 			WAIT(0);
@@ -891,6 +917,8 @@ void main() {
 		});
 
 	remove("debug.txt");
+
+	load_colormap();
 
 	while (true) {
 		if (IsKeyJustUp(VK_F6)) {
