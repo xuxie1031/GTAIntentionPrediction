@@ -87,10 +87,10 @@ def posterior(batch_seq, batch_meanx, batch_covx, batch_meany, batch_covy, alpha
     gaussian_proby = np.prod(gaussian_probs(batch_seqy, batch_meany, batch_covy))
     gaussian_prob = gaussian_probx*gaussian_proby
 
-    # phi_ = phi(batch_seq, alpha_=alpha_, h=h)
+    phi_ = phi(batch_seq, alpha_=alpha_, h=h)
 
-    # return phi_*gaussian_prob
-    return gaussian_prob
+    return phi_*gaussian_prob
+    # return gaussian_prob
 
 
 def displacement_error(pred_traj, pred_traj_gt, mode='sum'):
