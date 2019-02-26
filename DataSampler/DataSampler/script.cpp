@@ -715,6 +715,7 @@ void replay() {
 	std::unordered_map<int, std::pair<Entity, bool>> idMap;
 	std::unordered_map<int, std::unordered_map <int, std::vector<Vector2>>> coordsMap;
 	loadPredictions(coordsMap);
+	outputDebugMessage("Loaded Prediction.");
 
 	int waitTime = 0;
 	int now = -1;
@@ -722,6 +723,7 @@ void replay() {
 	int timestamp;
 
 	while (record >> timestamp) {
+
 		clearArea();
 
 		record.ignore(1000, ',');
