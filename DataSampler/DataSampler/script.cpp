@@ -250,11 +250,12 @@ void setCars() {
 
 		for (int j = 0; j < numCars[i]; j++) {
 			outputDebugMessage("Spawn " + std::to_string(j) + "-th car.");
+			float heading = settings["carStartPositions"][i].count("carHeading") ? settings["carStartPositions"][i]["carHeading"] : settings["carHeading"];
 			Vehicle v = spawnAtCoords(settings["carModel"].get<std::string>().c_str(), MODEL_VEH, start, settings["carHeading"]);
 			Ped driver = spawnDriver(v, settings["pedModel"].get<std::string>().c_str());
 
 			int goalNum = randomNum(0, settings["carStartPositions"][i]["goals"].size() - 1);
-			float speed = randomNum((float)settings["carMinSpeed"], settings["carMaxSpeed"]);
+			float speed = randomNum((float)settings["carStartPositions"][i]["carMinSpeed"], settings["carStartPositions"][i]["carMaxSpeed"]);
 			Vector3d goal = settings["carStartPositions"][i]["goals"][goalNum];
 
 			createTaskSequence(driver, [&]() {
@@ -598,10 +599,12 @@ void setCenterCoords() {
 
 void addCarStartPosition() {
 	json newPosition;
-	printOnScreen("Record front of lane");
-	recordPosition(newPosition["front"]);
 	printOnScreen("Record back of lane");
 	recordPosition(newPosition["back"]);
+	printOnScreen("Record heading of lane.");
+	recordPosition(newPosition["carHeading"], false, true);
+	printOnScreen("Record front of lane");
+	recordPosition(newPosition["front"]);
 	printOnScreen("Record goals of lane.");
 	recordPosition(newPosition["goals"], true);
 	settings["carStartPositions"].push_back(newPosition);
@@ -700,7 +703,50 @@ void loadPredictions(std::unordered_map<int, std::unordered_map <int, std::vecto
 			coordsMap[timestamp][id].push_back({ (float)coords.x, (float)coords.y });
 		}
 	}
+	for (auto& p : coordsMap) {
+		for (auto & c : p.second) {
+			sort(c.second.begin(), c.second.end());
+		}
+	}
+
 	prediction.close();
+}
+
+void loadReplay(std::unordered_map<int, std::unordered_map <int, std::pair<Vector3d, heading>>>& coordsMap, std::unorded_map<int, int>& deleteTimes) {
+	std::ifstream replay("record1.csv");
+	int timestamp;
+	while (replay >> timestamp) {
+		replay.ignore(1000, ',');
+
+		int id;
+		Vector3d coords3D;
+		float heading;
+
+		replay >> id;
+		replay.ignore(1000, ',');
+
+		// ignore 2D coords, not needed
+		replay.ignore(1000, ',');
+		replay.ignore(1000, ',');
+
+		replay >> coords3D.x;
+		replay.ignore(1000, ',');
+		replay >> coords3D.y;
+		replay.ignore(1000, ',');
+		replay >> coords3D.z;
+		replay.ignore(1000, ',');
+
+		record >> heading;
+		//record.ignore(1000, ',');
+		//record >> speed;
+		record.ignore(1000, '\n');
+
+		deleteTimes[id] = timestamp + 1;
+		coordsMap[timestamp][id].push_back(std::make_pair(coords3D, heading));
+	}
+
+	record.close();
+
 }
 
 void replay() {
