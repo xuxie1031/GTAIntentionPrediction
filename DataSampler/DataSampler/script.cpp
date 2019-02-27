@@ -712,7 +712,7 @@ void loadPredictions(std::unordered_map<int, std::unordered_map <int, std::vecto
 	prediction.close();
 }
 
-void loadReplay(std::unordered_map<int, std::unordered_map <int, std::pair<Vector3d, float>>>& coordsMap, std::unordered_map<int, int>& deleteTimes) {
+void loadReplay(std::unordered_map<int, std::unordered_map <int, std::pair<Vector3d, float>>>& coordsMap, std::unordered_map<int, int>& lastAppear) {
 	std::ifstream replay("record1.csv");
 	int timestamp;
 	while (replay >> timestamp) {
@@ -737,11 +737,9 @@ void loadReplay(std::unordered_map<int, std::unordered_map <int, std::pair<Vecto
 		replay.ignore(1000, ',');
 
 		replay >> heading;
-		//record.ignore(1000, ',');
-		//record >> speed;
 		replay.ignore(1000, '\n');
 
-		deleteTimes[id] = timestamp + 1;
+		lastAppear[id] = timestamp;
 		coordsMap[timestamp][id] = std::make_pair(coords3D, heading);
 	}
 
@@ -756,191 +754,98 @@ void replay() {
 
 	int color[][3] = { {255,0,0}, {0,255,0}, {0,0,255} };
 
-	std::ifstream record("record1.csv");
-
-	std::unordered_map<int, std::pair<Entity, bool>> idMap;
-	std::unordered_map<int, std::unordered_map <int, std::vector<Vector2>>> coordsMap;
-	loadPredictions(coordsMap);
+	std::unordered_map<int, int> lastAppears;
+	std::unordered_map<int, std::unordered_map <int, std::pair<Vector3d, float>>> replayCoords;
+	std::unordered_map<int, std::unordered_map <int, std::vector<Vector2>>> predictCoords;
+	loadPredictions(predictCoords);
 	outputDebugMessage("Loaded Prediction.");
+	loadReplay(replayCoords, lastAppears);
 
-	int waitTime = 0;
-	int now = -1;
+	std::unordered_map<int, Entity> idMap;
 
-	int timestamp;
+	int waitTime = settings["period"];
+	int now = 0;
 
-	while (record >> timestamp) {
-
+	while (replayCoords.count(now) || predictCoords.count(now)) {
 		clearArea();
 
-		record.ignore(1000, ',');
-
-		int id;
-		Vector3d coords3D;
-		float heading;
-		//float speed;
-
-		record >> id;
-		record.ignore(1000, ',');
-
-		// ignore 2D coords, not needed
-		record.ignore(1000, ',');
-		record.ignore(1000, ',');
-
-		record >> coords3D.x;
-		record.ignore(1000, ',');
-		record >> coords3D.y;
-		record.ignore(1000, ',');
-		record >> coords3D.z;
-		record.ignore(1000, ',');
-
-		record >> heading;
-		//record.ignore(1000, ',');
-		//record >> speed;
-		record.ignore(1000, '\n');
-
-
-		if (timestamp != now) {
-			now = timestamp;
-			for (auto& pair : idMap) {
-				bool& visited = pair.second.second;
-				if (visited == true) { // reset visted value
-					visited = false;
-				}
-				else { // delete the unvisited entity
-					int id = pair.first;
-					Entity e = pair.second.first;
+		if (replayCoords.count(now)) {
+			// recycle unappeared entities
+			for (auto& lastAppear : lastAppears) {
+				int id = lastAppear.first;
+				int timestamp = lastAppear.second;
+				if (timestamp == now - 1) {
 					if (id >= PED_ID_OFFSET) {
 						for (int i = 0; i < createdPeds.size(); i++) {
-							if (createdPeds[i] == e) {
+							if (createdPeds[i] == idMap[id]) {
 								deletePed(i);
-								break;
 							}
 						}
 					}
 					else {
 						for (int i = 0; i < createdVehicles.size(); i++) {
-							if (createdVehicles[i] == e) {
+							if (createdVehicles[i] == idMap[id]) {
 								deleteCar(i);
-								break;
 							}
 						}
 					}
-					idMap.erase(id);
 				}
 			}
-			waitTime = settings["period"];
-		}
-		else {
-			waitTime = 0;
-		}
 
-		if (id >= PED_ID_OFFSET) {
-			if (!idMap.count(id)) {
-				Ped p = spawnAtCoords(settings["pedModel"].get<std::string>().c_str(), MODEL_PED, coords3D, heading);
-				idMap[id] = std::make_pair(p, true);
-			}
-			else {
-				Ped p = idMap[id].first;
-				idMap[id].second = true;
-				// AI::TASK_GO_STRAIGHT_TO_COORD(p, coords3D.x, coords3D.y, coords3D.z, speed, 2000000, heading, 0.2);
-				ENTITY::SET_ENTITY_COORDS_NO_OFFSET(p, coords3D.x, coords3D.y, coords3D.z, 1, 0, 0);
-				ENTITY::SET_ENTITY_HEADING(p, heading);
-			}
-		}
-		else {
-			if (!idMap.count(id)) {
-				Vehicle v = spawnAtCoords(settings["carModel"].get<std::string>().c_str(), MODEL_VEH, coords3D, heading);
-				spawnDriver(v, settings["pedModel"].get<std::string>().c_str());
-				idMap[id] = std::make_pair(v, true);
-			}
-			else {
-				Vehicle v = idMap[id].first;
-				idMap[id].second = true;
-
-				int i;
-				for (i = 0; i < createdVehicles.size(); i++) {
-					if (createdVehicles[i] == v) {
-						break;
+			// update positions of appeared entities
+			for (auto& entityProps : replayCoords[now]) {
+				int id = entityProps.first;
+				Vector3d coords3D = entityProps.second.first;
+				float heading = entityProps.second.second;
+				if (idMap.count(id)) {
+					Entity e = idMap[id];
+					ENTITY::SET_ENTITY_COORDS_NO_OFFSET(e, coords3D.x, coords3D.y, coords3D.z, 1, 0, 0);
+					ENTITY::SET_ENTITY_HEADING(e, heading);
+				}
+				else {
+					if (id >= PED_ID_OFFSET) {
+						Ped p = spawnAtCoords(settings["pedModel"].get<std::string>().c_str(), MODEL_PED, coords3D, heading);
+						idMap[id] = p;
+					}
+					else {
+						Vehicle v = spawnAtCoords(settings["carModel"].get<std::string>().c_str(), MODEL_VEH, coords3D, heading);
+						spawnDriver(v, settings["pedModel"].get<std::string>().c_str());
+						idMap[id] = v;
 					}
 				}
-				Ped driver = createdDrivers[i];
-
-				ENTITY::SET_ENTITY_COORDS_NO_OFFSET(v, coords3D.x, coords3D.y, coords3D.z, 1, 0, 0);
-				ENTITY::SET_ENTITY_HEADING(v, heading);
-
-				// AI::TASK_VEHICLE_DRIVE_TO_COORD(driver, v, coords3D.x, coords3D.y, coords3D.z, speed, 0, GAMEPLAY::GET_HASH_KEY((char *)(settings["carModel"].get<std::string>().c_str())), 786475, 0.2, 1.0);
 			}
-
 		}
-		if (coordsMap.count(timestamp)) {
-			if (waitTime != 0) {
-				DWORD maxTickCount = GetTickCount() + waitTime;
-				while (GetTickCount() < maxTickCount) {
-					for (auto& p : coordsMap[timestamp]) {
-						//for (auto c : p.second) {
-						//	draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
-						//}
-						Entity ent = idMap[p.first].first;
-						Vector3 entPose = ENTITY::GET_ENTITY_COORDS(ent, true);
-						for (auto c : p.second) {
-							Vector3 forwardVec;
-							forwardVec.x = c.x - entPose.x;
-							forwardVec.y = c.y - entPose.y;
-							draw_quadrant(forwardVec, forwardVec.x, forwardVec.y, entPose, 1, 0);
-						}
-					}
-					WAIT(0);
-				}
-			}
-			else {
-				for (auto& p : coordsMap[timestamp]) {
-					//for (auto c : p.second) {
-					//	draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
-					//}
-					Entity ent = idMap[p.first].first;
+		else {
+			deleteAllCreated();
+		}
+
+		if (predictCoords.count(now)) {
+			DWORD maxTickCount = GetTickCount() + waitTime;
+			while (GetTickCount() < maxTickCount) {
+				for (auto& p : predictCoords[now]) {
+					Entity ent = idMap[p.first];
 					Vector3 entPose = ENTITY::GET_ENTITY_COORDS(ent, true);
+					Vector3 groundTruth = replayCoords[now + 12][p.first].first;
 					for (auto c : p.second) {
 						Vector3 forwardVec;
 						forwardVec.x = c.x - entPose.x;
 						forwardVec.y = c.y - entPose.y;
-						draw_quadrant(forwardVec, forwardVec.x, forwardVec.y, entPose, 1, 0);
+
+						float colorOffset = 255 - 255 * exp(-0.05 * GAMEPLAY::GET_DISTANCE_BETWEEN_COORDS(c.x, c.y, groundTruth.z, groundTruth.x, groundTruth.y, groundTruth.z, false));
+						outputDebugMessage("colorOffset is " + std::to_string(colorOffset));
+
+						draw_quadrant(forwardVec, forwardVec.x, forwardVec.y, entPose, 1, colorOffset);
 					}
 				}
+				WAIT(0);
 			}
 		}
 		else {
-			if (waitTime != 0) {
-				WAIT(waitTime);
-			}
-		}
-	}
-
-	record.close();
-	deleteAllCreated();
-
-	now++;
-	while (coordsMap.count(now)) {
-		DWORD maxTickCount = GetTickCount() + settings["period"];
-		clearArea();
-		while (GetTickCount() < maxTickCount) {
-			for (auto& p : coordsMap[now]) {
-				//for (auto c : p.second) {
-				//	draw_mark_at(c, color[p.first][0], color[p.first][1], color[p.first][2]);
-				//}
-				Entity ent = idMap[p.first].first;
-				Vector3 entPose = ENTITY::GET_ENTITY_COORDS(ent, true);
-				for (auto c : p.second) {
-					Vector3 forwardVec;
-					forwardVec.x = c.x - entPose.x;
-					forwardVec.y = c.y - entPose.y;
-					draw_quadrant(forwardVec, forwardVec.x, forwardVec.y, entPose, 1, 0);
-				}
-			}
-			WAIT(0);
+			WAIT(waitTime);
 		}
 		now++;
 	}
-
+	deleteAllCreated();
 }
 
 void main() {
