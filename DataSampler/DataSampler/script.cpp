@@ -250,13 +250,18 @@ void setCars() {
 
 		for (int j = 0; j < numCars[i]; j++) {
 			outputDebugMessage("Spawn " + std::to_string(j) + "-th car.");
+			if (settings["carStartPositions"][i].count("carHeading")) {
+				outputDebugMessage("Heading is: " + settings["carStartPositions"][i]["carHeading"].dump());
+			}
 			float heading = settings["carStartPositions"][i].count("carHeading") ? settings["carStartPositions"][i]["carHeading"] : settings["carHeading"];
-			Vehicle v = spawnAtCoords(settings["carModel"].get<std::string>().c_str(), MODEL_VEH, start, settings["carHeading"]);
+			Vehicle v = spawnAtCoords(settings["carModel"].get<std::string>().c_str(), MODEL_VEH, start, heading);
 			Ped driver = spawnDriver(v, settings["pedModel"].get<std::string>().c_str());
 
+			outputDebugMessage("Finished spawn car.");
 			int goalNum = randomNum(0, settings["carStartPositions"][i]["goals"].size() - 1);
-			float speed = randomNum((float)settings["carStartPositions"][i]["carMinSpeed"], settings["carStartPositions"][i]["carMaxSpeed"]);
+			float speed = randomNum((float)settings["carMinSpeed"], settings["carMaxSpeed"]);
 			Vector3d goal = settings["carStartPositions"][i]["goals"][goalNum];
+			outputDebugMessage("Going to " + std::to_string(goalNum) + "-th goal");
 
 			createTaskSequence(driver, [&]() {
 				AI::TASK_VEHICLE_DRIVE_TO_COORD(0, v, goal.x, goal.y, goal.z, speed, 0, GAMEPLAY::GET_HASH_KEY((char *)(settings["carModel"].get<std::string>().c_str())), settings["driveStyle"], settings["carStopRange"], 1.0);
@@ -442,7 +447,7 @@ void startSimulation() {
 	std::string curConfig = "_nw_250";
 
 	for (int i = 0; i < 100; i++) {
-		if (true) {
+		if (false) {
 			outputDebugMessage("start simulation " + std::to_string(i) + ".");
 			clearArea();
 			outputDebugMessage("clearArea complete.");
@@ -499,9 +504,9 @@ void startSimulation() {
 			nextTickCount = GetTickCount();
 			isPedInjured = false;
 			forceBreak = false;
-			std::vector<std::string> recordFile = { "[Mix]" + curType + curConfig };
+			std::vector<std::string> recordFile = { "[Mix]" + curType + "_nw_375" };
 			recordFile.push_back("[" + std::to_string(j) + "]" + "record" + std::to_string(i));
-			processRecording(recordFile, delegate, settings["period"]);
+			processRecording(recordFile, delegate, 375);
 			outputDebugMessage("recoding complete.");
 			deleteAllCreated();
 			outputDebugMessage("deleteAll complete.");
@@ -703,16 +708,11 @@ void loadPredictions(std::unordered_map<int, std::unordered_map <int, std::vecto
 			coordsMap[timestamp][id].push_back({ (float)coords.x, (float)coords.y });
 		}
 	}
-	for (auto& p : coordsMap) {
-		for (auto & c : p.second) {
-			sort(c.second.begin(), c.second.end());
-		}
-	}
 
 	prediction.close();
 }
 
-void loadReplay(std::unordered_map<int, std::unordered_map <int, std::pair<Vector3d, heading>>>& coordsMap, std::unorded_map<int, int>& deleteTimes) {
+void loadReplay(std::unordered_map<int, std::unordered_map <int, std::pair<Vector3d, float>>>& coordsMap, std::unordered_map<int, int>& deleteTimes) {
 	std::ifstream replay("record1.csv");
 	int timestamp;
 	while (replay >> timestamp) {
@@ -736,16 +736,16 @@ void loadReplay(std::unordered_map<int, std::unordered_map <int, std::pair<Vecto
 		replay >> coords3D.z;
 		replay.ignore(1000, ',');
 
-		record >> heading;
+		replay >> heading;
 		//record.ignore(1000, ',');
 		//record >> speed;
-		record.ignore(1000, '\n');
+		replay.ignore(1000, '\n');
 
 		deleteTimes[id] = timestamp + 1;
-		coordsMap[timestamp][id].push_back(std::make_pair(coords3D, heading));
+		coordsMap[timestamp][id] = std::make_pair(coords3D, heading);
 	}
 
-	record.close();
+	replay.close();
 
 }
 
