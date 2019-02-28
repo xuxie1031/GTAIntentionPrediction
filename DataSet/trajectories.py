@@ -60,7 +60,7 @@ class TrajectoryDataset(Dataset):
                     curr_agent_seq = np.around(curr_agent_seq, decimals=4)
                     agent_front = frames.index(curr_agent_seq[0, 0])-idx
                     agent_end = frames.index(curr_agent_seq[-1, 0])-idx+1
-                    if agent_end-agent_front != self.seq_len:
+                    if agent_end-agent_front != self.seq_len or len(curr_agent_seq) != self.seq_len:
                         continue
                     curr_agent_seq = np.transpose(curr_agent_seq[:, 4:6])
                     _idx = num_nodes

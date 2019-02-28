@@ -44,8 +44,8 @@ def evaluate(args, batch, generator):
                 veh_pred_fake, _ = veh_ped_seperate(pred_fake, ids)
                 veh_pred_data, _ = veh_ped_seperate(pred_data, ids)
 
-                error = displacement_error(veh_pred_fake, veh_pred_data)
-                # error = final_displacement_error(veh_pred_fake, veh_pred_data)
+                # error = displacement_error(veh_pred_fake, veh_pred_data)
+                error = final_displacement_error(veh_pred_fake, veh_pred_data)
                 err_samples += error.item()
             
             err_samples /= args.num_samples

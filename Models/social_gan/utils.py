@@ -100,23 +100,28 @@ def l2_loss(traj_pred, traj_pred_gt, mode='average'):
         return loss.sum(dim=2).sum(dim=1)
 
 
-def displacement_error(pred_traj, pred_traj_gt, mode='sum'):
+def displacement_error(pred_traj, pred_traj_gt, mode='avg'):
     loss = pred_traj_gt.permute(1, 0, 2)-pred_traj.permute(1, 0, 2)
     loss = loss**2
-    loss = torch.sqrt(loss.sum(dim=2)).sum(dim=1)
+    # loss = torch.sqrt(loss.sum(dim=2)).sum(dim=1)
+    loss = torch.sqrt(loss.sum(dim=2)).mean(dim=1)
 
     if mode == 'sum':
         return torch.sum(loss)
+    elif mode == 'avg':
+        return torch.mean(loss)
     elif mode == 'raw':
         return loss
 
 
-def final_displacement_error(pred_pos, pred_pos_gt, mode='sum'):
+def final_displacement_error(pred_pos, pred_pos_gt, mode='avg'):
     loss = pred_pos_gt-pred_pos
     loss = loss**2
     loss = torch.sqrt(loss.sum(dim=1))
 
     if mode == 'sum':
         return torch.sum(loss)
+    elif mode == 'avg':
+        return torch.mean(loss)
     elif mode == 'raw':
         return loss

@@ -95,7 +95,8 @@ def sample_gaussian_2d(mux, muy, sx, sy, corr):
 def displacement_error(pred_traj, pred_traj_gt, mode='avg'):
     loss = pred_traj_gt.permute(1, 0, 2)-pred_traj.permute(1, 0, 2)
     loss = loss**2
-    loss = torch.sqrt(loss.sum(dim=2)).sum(dim=1)
+    # loss = torch.sqrt(loss.sum(dim=2)).sum(dim=1)
+    loss = torch.sqrt(loss.sum(dim=2)).mean(dim=1)
 
     if mode == 'sum':
         return torch.sum(loss)
