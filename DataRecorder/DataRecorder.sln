@@ -3,22 +3,20 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.136
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DataSampler", "DataSampler\DataSampler.vcxproj", "{7B94409D-A097-44B7-8D81-5814F364D640}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C2884637-F57D-4BF0-BA5A-EF8BD995E6A8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DataRecorder", "DataRecorder\DataRecorder.vcxproj", "{474CE431-CAEC-48CD-A9D1-EEB7F11CC42F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7B94409D-A097-44B7-8D81-5814F364D640}.Release|x64.ActiveCfg = Release|x64
-		{7B94409D-A097-44B7-8D81-5814F364D640}.Release|x64.Build.0 = Release|x64
+		{474CE431-CAEC-48CD-A9D1-EEB7F11CC42F}.Release|x64.ActiveCfg = Release|x64
+		{474CE431-CAEC-48CD-A9D1-EEB7F11CC42F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {2864B19B-31F6-4410-AE5A-0F0C95721D53}
+		SolutionGuid = {443E7D85-49C4-409D-B669-B148BDE7092E}
 	EndGlobalSection
 EndGlobal

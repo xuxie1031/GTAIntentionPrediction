@@ -4,26 +4,26 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="script.cpp" />
     <ClCompile Include="keyboard.cpp" />
-    <ClCompile Include="Menu.cpp" />
     <ClCompile Include="graphics.cpp" />
-    <ClCompile Include="GameResources.cpp" />
-    <ClCompile Include="debug.cpp" />
-    <ClCompile Include="Settings.cpp" />
-    <ClCompile Include="Selector.cpp" />
+    <ClCompile Include="Menu.cpp" />
+    <ClCompile Include="gamePlay.cpp" />
+    <ClCompile Include="system.cpp" />
+    <ClCompile Include="InstructionButtons.cpp" />
+    <ClCompile Include="sampling.cpp" />
+    <ClCompile Include="gameResources.cpp" />
+    <ClCompile Include="SimulationData.cpp" />
+    <ClCompile Include="Simulator.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="script.h" />
     <ClInclude Include="keyboard.h" />
-    <ClInclude Include="Menu.h" />
     <ClInclude Include="graphics.h" />
-    <ClInclude Include="myTypes.h" />
-    <ClInclude Include="myEnums.h" />
-    <ClInclude Include="GameResources.h" />
-    <ClInclude Include="debug.h" />
     <ClInclude Include="inc\enums.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="inc\main.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\nativeCaller.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="inc\natives.h">
@@ -32,17 +32,21 @@
     <ClInclude Include="inc\types.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="nlohmann\json.hpp">
-      <Filter>nlohmann</Filter>
-    </ClInclude>
-    <ClInclude Include="Settings.h" />
+    <ClInclude Include="script.h" />
+    <ClInclude Include="myEnums.h" />
+    <ClInclude Include="myTypes.h" />
+    <ClInclude Include="Menu.h" />
+    <ClInclude Include="gamePlay.h" />
+    <ClInclude Include="system.h" />
+    <ClInclude Include="InstructionButtons.h" />
+    <ClInclude Include="sampling.h" />
+    <ClInclude Include="SimulationData.h" />
+    <ClInclude Include="gameResources.h" />
+    <ClInclude Include="Simulator.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">
       <UniqueIdentifier>{fe82bd4a-2d14-486a-8be5-8bf6b50a2414}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="nlohmann">
-      <UniqueIdentifier>{e18e2467-be5b-4337-937b-4c7d543ade70}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

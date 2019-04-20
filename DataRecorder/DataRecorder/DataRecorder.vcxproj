@@ -7,38 +7,47 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="debug.cpp" />
     <ClCompile Include="gameResources.cpp" />
+    <ClCompile Include="InstructionButtons.cpp" />
+    <ClCompile Include="samplerMenu.cpp" />
+    <ClCompile Include="sampling.cpp" />
+    <ClCompile Include="Simulator.cpp" />
+    <ClCompile Include="SimulationData.cpp" />
+    <ClCompile Include="system.cpp" />
+    <ClCompile Include="gamePlay.cpp" />
     <ClCompile Include="graphics.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="script.cpp" />
-    <ClCompile Include="Selector.cpp" />
-    <ClCompile Include="Settings.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="debug.h" />
     <ClInclude Include="gameResources.h" />
+    <ClInclude Include="InstructionButtons.h" />
+    <ClInclude Include="samplerMenu.h" />
+    <ClInclude Include="sampling.h" />
+    <ClInclude Include="Simulator.h" />
+    <ClInclude Include="SimulationData.h" />
+    <ClInclude Include="system.h" />
+    <ClInclude Include="gamePlay.h" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="inc\enums.h" />
     <ClInclude Include="inc\main.h" />
+    <ClInclude Include="inc\nativeCaller.h" />
     <ClInclude Include="inc\natives.h" />
     <ClInclude Include="inc\types.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="myEnums.h" />
     <ClInclude Include="myTypes.h" />
-    <ClInclude Include="nlohmann\json.hpp" />
     <ClInclude Include="script.h" />
-    <ClInclude Include="Settings.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{7b94409d-a097-44b7-8d81-5814f364d640}</ProjectGuid>
+    <ProjectGuid>{474ce431-caec-48cd-a9d1-eeb7f11cc42f}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>DataSampler</RootNamespace>
-    <ProjectName>DataSampler</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <RootNamespace>DataRecorder</RootNamespace>
+    <ProjectName>DataRecorder</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -69,7 +78,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;DataSampler_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;NativeTrainer_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FloatingPointModel>Fast</FloatingPointModel>
       <AdditionalIncludeDirectories>

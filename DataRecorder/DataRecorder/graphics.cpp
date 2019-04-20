@@ -2,43 +2,33 @@
 
 static unsigned char colormap[COLORNUM * 3];
 
-void draw_rect(float A_0, float A_1, float A_2, float A_3, int A_4, int A_5, int A_6, int A_7)
+void drawRectangle(float A_0, float A_1, float A_2, float A_3, int A_4, int A_5, int A_6, int A_7)
 {
-	GRAPHICS::DRAW_RECT((A_0 + (A_2 * 0.5f)), (A_1 + (A_3 * 0.5f)), A_2, A_3, A_4, A_5, A_6, A_7);
+	GRAPHICS::DRAW_RECT((A_0 + (A_2 * 0.5f)), (A_1 + (A_3 * 0.5f)), A_2, A_3, A_4, A_5, A_6, A_7);  // x, y, width, height, rgb, alpha
 }
 
-void draw_menu_line(std::string caption, float lineWidth, float lineHeight, float lineTop, float lineLeft, float textLeft, bool active, bool title, bool rescaleText)
+void drawLine(Vector3d p1, Vector3d p2, const Color& color) {
+	GRAPHICS::DRAW_LINE(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color.red, color.green, color.blue, color.alpha);
+}
+
+void drawCircle(Vector3d center, float radius, const Color& color) {
+	const int SIDES = 16;
+	float degree = 0;
+	Vector3d p1 = center;
+	p1.x += sin(degree) * radius;
+	p1.y += cos(degree) * radius;
+	for (int i = 0; i < SIDES; i++) {
+		degree += M_PI * 2 / SIDES;
+		Vector3d p2 = center;
+		p2.x += sin(degree) * radius;
+		p2.y += cos(degree) * radius;
+		drawLine(p1, p2, color);
+		p1 = p2;
+	}
+}
+
+void drawTextLine(std::string caption, float lineWidth, float lineHeight, float lineTop, float lineLeft, float textLeft, Color textColor, Color backgroundColor, float textScale, int font)
 {
-	// default values
-	int text_col[4] = { 255, 255, 255, 255 },
-		rect_col[4] = { 70, 95, 95, 255 };
-	float text_scale = 0.35;
-	int font = 0;
-
-	// correcting values for active line
-	if (active)
-	{
-		text_col[0] = 0;
-		text_col[1] = 0;
-		text_col[2] = 0;
-
-		rect_col[0] = 218;
-		rect_col[1] = 242;
-		rect_col[2] = 216;
-
-		if (rescaleText) text_scale = 0.40;
-	}
-
-	if (title)
-	{
-		rect_col[0] = 0;
-		rect_col[1] = 0;
-		rect_col[2] = 0;
-
-		if (rescaleText) text_scale = 0.50;
-		font = 1;
-	}
-
 	int screen_w, screen_h;
 	GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
 
@@ -55,8 +45,8 @@ void draw_menu_line(std::string caption, float lineWidth, float lineHeight, floa
 
 	// text upper part
 	UI::SET_TEXT_FONT(font);
-	UI::SET_TEXT_SCALE(0.0, text_scale);
-	UI::SET_TEXT_COLOUR(text_col[0], text_col[1], text_col[2], text_col[3]);
+	UI::SET_TEXT_SCALE(0.0, textScale);
+	UI::SET_TEXT_COLOUR(textColor.red, textColor.green, textColor.blue, textColor.alpha);
 	UI::SET_TEXT_CENTRE(0);
 	UI::SET_TEXT_DROPSHADOW(0, 0, 0, 0, 0);
 	UI::SET_TEXT_EDGE(0, 0, 0, 0, 0);
@@ -66,8 +56,8 @@ void draw_menu_line(std::string caption, float lineWidth, float lineHeight, floa
 
 	// text lower part
 	UI::SET_TEXT_FONT(font);
-	UI::SET_TEXT_SCALE(0.0, text_scale);
-	UI::SET_TEXT_COLOUR(text_col[0], text_col[1], text_col[2], text_col[3]);
+	UI::SET_TEXT_SCALE(0.0, textScale);
+	UI::SET_TEXT_COLOUR(textColor.red, textColor.green, textColor.blue, textColor.alpha);
 	UI::SET_TEXT_CENTRE(0);
 	UI::SET_TEXT_DROPSHADOW(0, 0, 0, 0, 0);
 	UI::SET_TEXT_EDGE(0, 0, 0, 0, 0);
@@ -76,32 +66,28 @@ void draw_menu_line(std::string caption, float lineWidth, float lineHeight, floa
 	int num25 = UI::_0x9040DFB09BE75706(textLeftScaled, (((lineTopScaled + 0.00278f) + lineHeightScaled) - 0.005f));
 
 	// rect
-	draw_rect(lineLeftScaled, lineTopScaled + (0.00278f),
-		lineWidthScaled, ((((float)(num25)* UI::_0xDB88A37483346780(text_scale, 0)) + (lineHeightScaled * 2.0f)) + 0.005f),
-		rect_col[0], rect_col[1], rect_col[2], rect_col[3]);
+	drawRectangle(lineLeftScaled, lineTopScaled + (0.00278f),
+		lineWidthScaled, ((((float)(num25)* UI::_0xDB88A37483346780(textScale, 0)) + (lineHeightScaled * 2.0f)) + 0.005f),
+		backgroundColor.red, backgroundColor.green, backgroundColor.blue, backgroundColor.alpha);
 }
 
-void printOnScreen(std::string s) {
-	DWORD maxTickCount = GetTickCount() + 5000;
-	while (GetTickCount() < maxTickCount) {
-		draw_menu_line(s, 350.0, 15.0, 15, 400, 5.0, false, true);
-		WAIT(0);
-	}
-	WAIT(0);
+void drawMarker(int type, Vector3d position, float scale, Color color) {
+	float groundHeight;
+	GAMEPLAY::GET_GROUND_Z_FOR_3D_COORD(position.x, position.y, position.z, &groundHeight, 0);
+	Vector3d direction(0, 0, 0);
+	Vector3d rotation(180, 0, 0);
+	GRAPHICS::DRAW_MARKER(type, position.x, position.y, groundHeight+0.4*scale, direction.x, direction.y, direction.z, rotation.x, rotation.y, rotation.z, scale, scale, scale, color.red, color.green, color.blue, color.alpha, false, true, 2, false, false, false, false);
 }
 
-void draw_mark_at(Vector2 coords, int r, int g, int b)
+void drawHelpText(std::string text)
 {
-	float sideLen = 10;
-
-	int screen_w, screen_h;
-	GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
-
-	GRAPHICS::DRAW_RECT((coords.x - sideLen/2)/screen_w, (coords.y - sideLen/2)/screen_h,
-		sideLen/screen_w, sideLen/screen_h, r, g, b, 255);
+	UI::_SET_TEXT_COMPONENT_FORMAT("STRING");
+	UI::_ADD_TEXT_COMPONENT_STRING((LPSTR)(text.c_str()));
+	UI::_DISPLAY_HELP_TEXT_FROM_STRING_LABEL(0, 0, 1, -1);
 }
 
-void draw_line_positive(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float k, int colorOffset)
+
+void drawLinePositive(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float k, int colorOffset)
 {
 	for (int i = 0; i < num_interp; i++)
 	{
@@ -122,7 +108,7 @@ void draw_line_positive(Vector3 initV, float unit_x_length, float unit_bar_lengt
 	}
 }
 
-void draw_line_negative(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float k, int colorOffset)
+void drawLineNegative(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float k, int colorOffset)
 {
 	for (int i = num_interp - 1; i >= 0; i--)
 	{
@@ -143,7 +129,7 @@ void draw_line_negative(Vector3 initV, float unit_x_length, float unit_bar_lengt
 	}
 }
 
-void draw_paraboa_positive_x(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
+void drawParaboaPositiveX(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
 {
 	for (int i = 0; i < num_interp; i++)
 	{
@@ -163,7 +149,7 @@ void draw_paraboa_positive_x(Vector3 initV, float unit_x_length, float unit_bar_
 	}
 }
 
-void draw_paraboa_negative_x(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
+void drawParaboaNegativeX(Vector3 initV, float unit_x_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
 {
 	for (int i = num_interp - 1; i >= 0; i--)
 	{
@@ -183,7 +169,7 @@ void draw_paraboa_negative_x(Vector3 initV, float unit_x_length, float unit_bar_
 	}
 }
 
-void draw_paraboa_positive_y(Vector3 initV, float unit_y_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
+void drawParaboaPositiveY(Vector3 initV, float unit_y_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
 {
 	for (int i = 0; i < num_interp; i++)
 	{
@@ -203,7 +189,7 @@ void draw_paraboa_positive_y(Vector3 initV, float unit_y_length, float unit_bar_
 	}
 }
 
-void draw_paraboa_negative_y(Vector3 initV, float unit_y_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
+void drawParaboaNegativeY(Vector3 initV, float unit_y_length, float unit_bar_length, int num_interp, float a, float b, int colorOffset)
 {
 	for (int i = num_interp - 1; i >= 0; i--)
 	{
@@ -223,7 +209,7 @@ void draw_paraboa_negative_y(Vector3 initV, float unit_y_length, float unit_bar_
 	}
 }
 
-void draw_quadrant(Vector3 forwardVec, float x0, float y0, Vector3 initV, int num_interp, int colorOffset)
+void drawQuadrant(Vector3 forwardVec, float x0, float y0, Vector3 initV, int num_interp, int colorOffset)
 {
 	if (forwardVec.x*x0 < 0 && forwardVec.y*y0 < 0)
 		return;
@@ -236,9 +222,9 @@ void draw_quadrant(Vector3 forwardVec, float x0, float y0, Vector3 initV, int nu
 		float a = -y0 / (x0*x0);
 		float b = 2 * y0 / x0;
 		if (x0 > 0)
-			draw_paraboa_positive_x(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
+			drawParaboaPositiveX(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
 		else
-			draw_paraboa_negative_x(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
+			drawParaboaNegativeX(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
 	}
 
 	if (forwardVec.x * x0 > 0 && forwardVec.y * y0 < 0)
@@ -246,9 +232,9 @@ void draw_quadrant(Vector3 forwardVec, float x0, float y0, Vector3 initV, int nu
 		float a = -x0 / (y0*y0);
 		float b = 2 * x0 / y0;
 		if (y0 > 0)
-			draw_paraboa_positive_y(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
+			drawParaboaPositiveY(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
 		else
-			draw_paraboa_negative_y(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
+			drawParaboaNegativeY(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
 	}
 
 	if (forwardVec.x * x0 > 0 && forwardVec.y * y0 > 0)
@@ -267,50 +253,32 @@ void draw_quadrant(Vector3 forwardVec, float x0, float y0, Vector3 initV, int nu
 				float a = -y0 / (x0*x0);
 				float b = 2 * y0 / x0;
 				if (x0 > 0)
-					draw_paraboa_positive_x(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
+					drawParaboaPositiveX(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
 				else
-					draw_paraboa_negative_x(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
+					drawParaboaNegativeX(initV, unit_x_length, unit_bar_length, num_interp, a, b, colorOffset);
 			}
 			else
 			{
 				float a = -x0 / (y0*y0);
 				float b = 2 * x0 / y0;
 				if (y0 > 0)
-					draw_paraboa_positive_y(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
+					drawParaboaPositiveY(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
 				else
-					draw_paraboa_negative_y(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
+					drawParaboaNegativeY(initV, unit_y_length, unit_bar_length, num_interp, a, b, colorOffset);
 			}
 		}
 		else
 		{
 			float k = y0 / x0;
 			if (x0 > 0)
-				draw_line_positive(initV, unit_x_length, unit_bar_length, num_interp, k, colorOffset);
+				drawLinePositive(initV, unit_x_length, unit_bar_length, num_interp, k, colorOffset);
 			else
-				draw_line_negative(initV, unit_x_length, unit_bar_length, num_interp, k, colorOffset);
+				drawLineNegative(initV, unit_x_length, unit_bar_length, num_interp, k, colorOffset);
 		}
 	}
 }
 
-void something() {
-	int screen_res_x;
-
-	int screen_res_y;
-
-	GRAPHICS::GET_SCREEN_RESOLUTION(&screen_res_x, &screen_res_y);
-
-	char* dword = "commonmenu";
-
-	char* dword2 = "gradient_bgd";
-
-	Vector3 texture_res = GRAPHICS::GET_TEXTURE_RESOLUTION(dword, dword2);
-
-	GRAPHICS::DRAW_SPRITE(dword, dword2, 0.16f, 0.5f, texture_res.x / (float)screen_res_x, texture_res.y / (float)screen_res_y, 0.0f, 255, 255, 255, 255);
-
-
-}
-
-void load_colormap(){
+void loadColormap() {
 	FILE* color_fid = fopen("jetcolor", "rb");
 	fread(colormap, sizeof(unsigned char), COLORNUM * 3, color_fid);
 	fclose(color_fid);

@@ -7,6 +7,7 @@
 #include "keyboard.h"
 
 const int KEYS_SIZE = 255;
+const eControl MENU_KEY = ControlSelectCharacterFranklin;
 
 struct {
 	DWORD time;
@@ -47,12 +48,16 @@ void ResetKeyState(DWORD key)
 		memset(&keyStates[key], 0, sizeof(keyStates[0]));
 }
 
-void get_button_state(bool *a, bool *b, bool *up, bool *down, bool *l, bool *r)
+bool isMenuKeyJustUp() {
+	return CONTROLS::IS_CONTROL_JUST_RELEASED(0, MENU_KEY);
+}
+
+void getButtonState(bool *a, bool *b, bool *up, bool *down, bool *l, bool *r)
 {
-	if (a) *a = IsKeyDown(VK_NUMPAD5);
-	if (b) *b = IsKeyDown(VK_NUMPAD0) || IsKeyJustUp(VK_F6) || IsKeyDown(VK_BACK);
-	if (up) *up = IsKeyDown(VK_NUMPAD8);
-	if (down) *down = IsKeyDown(VK_NUMPAD2);
-	if (r) *r = IsKeyDown(VK_NUMPAD6);
-	if (l) *l = IsKeyDown(VK_NUMPAD4);
+	if (a) *a = IsKeyJustUp(VK_NUMPAD5);
+	if (b) *b = IsKeyJustUp(VK_NUMPAD0) || isMenuKeyJustUp() || IsKeyJustUp(VK_BACK);
+	if (up) *up = IsKeyJustUp(VK_NUMPAD8);
+	if (down) *down = IsKeyJustUp(VK_NUMPAD2);
+	if (r) *r = IsKeyJustUp(VK_NUMPAD6);
+	if (l) *l = IsKeyJustUp(VK_NUMPAD4);
 }
