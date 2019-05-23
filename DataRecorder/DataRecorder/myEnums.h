@@ -1,7 +1,6 @@
 #pragma once
 #include "myTypes.h"
 
-
 enum PedTypes
 {
 	PED_TYPE_PLAYER_0,	// michael

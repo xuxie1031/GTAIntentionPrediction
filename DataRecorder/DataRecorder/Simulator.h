@@ -6,11 +6,14 @@
 #include "gamePlay.h"
 #include "gameResources.h"
 
+// a class that performs simulation, recording and replay
+// according to the simulation data
 class Simulator {
 public:
 	Simulator(SimulationData& data);
 	void startSimulation();
 	void processRecording(std::function<bool()> delegate, std::string fileName);
+	// TODO: change the format of replay input to a more general one
 	void processReplay(bool drawRainbow);
 private:
 	void setCars(SimulationData::VehSettings& settings);

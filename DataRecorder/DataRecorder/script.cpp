@@ -2,8 +2,6 @@
 
 #pragma warning(disable : 4244 4305) // double <-> float conversions
 
-
-
 void main()
 {
 	SimulationData data;

@@ -10,11 +10,17 @@ void Simulator::startSimulation() {
 		cam = GamePlay::activateCamera(data.camera.params);
 	}
 
+	// for each generation setting, use one DWORD to record the next time instance for repeated generation.
+	// tick is set to 0 to indicate disabled generation.
 	std::vector<DWORD> nextTickCountPed;
 	std::vector<DWORD> nextTickCountVeh;
-	bool isPedInjured;
+	bool isPedFighting;
 	bool forceBreak;
 
+	// I made this a lambda to separate the recording function from checking termination conditions and
+	// making other updates
+	// it controls the continuous generation and deletion of injured/useless peds/vehs
+	// if ped injured or force break pressed, it will return false to interrupt the simulation
 	auto delegate = [&]() {
 		GamePlay::clearArea();
 
@@ -44,12 +50,12 @@ void Simulator::startSimulation() {
 		}
 
 		for (int i = 0; i < GameResources::createdVehicles.size(); i++) {
-			if (PED::IS_PED_INJURED(GameResources::createdVehicles[i].driver)) {
-				outputDebugMessage("Ped injured. Break.");
-				isPedInjured = true;
+			if (PED::IS_PED_IN_MELEE_COMBAT(GameResources::createdVehicles[i].driver)) {
+				outputDebugMessage("Ped fighting. Break.");
+				isPedFighting = true;
 				return false;
 			}
-			if (GameResources::createdVehicles[i].scripted && AI::GET_SEQUENCE_PROGRESS(GameResources::createdVehicles[i].driver) == -1) {
+			if (AI::GET_SEQUENCE_PROGRESS(GameResources::createdVehicles[i].driver) == -1) {
 				outputDebugMessage("Deleting Car " + std::to_string(i));
 				GameResources::deleteVeh(i);
 				i--;
@@ -57,17 +63,18 @@ void Simulator::startSimulation() {
 		}
 
 		for (int i = 0; i < GameResources::createdPeds.size(); i++) {
-			if (PED::IS_PED_INJURED(GameResources::createdPeds[i].ped)) {
-				outputDebugMessage("Ped injured. Break.");
-				isPedInjured = true;
+			if (PED::IS_PED_IN_MELEE_COMBAT(GameResources::createdPeds[i].ped)) {
+				outputDebugMessage("Ped fighting. Break.");
+				isPedFighting = true;
 				return false;
 			}
-			if (GameResources::createdPeds[i].scripted && AI::GET_SEQUENCE_PROGRESS(GameResources::createdPeds[i].ped) == -1) {
+			if (AI::GET_SEQUENCE_PROGRESS(GameResources::createdPeds[i].ped) == -1) {
 				outputDebugMessage("Deleting Ped " + std::to_string(i));
 				GameResources::deletePed(i);
 				i--;
 			}
 		}
+
 		if (IsKeyJustUp(VK_NUMPAD0)) {
 			outputDebugMessage("Force break.");
 			forceBreak = true;
@@ -90,13 +97,13 @@ void Simulator::startSimulation() {
 		for (auto& veh : data.vehicles) {
 			nextTickCountVeh.push_back(veh.startTime + startTick);
 		}
-		isPedInjured = false;
+		isPedFighting = false;
 		forceBreak = false;
 		processRecording(delegate, "record" + std::to_string(i));
 		GameResources::deleteAllCreated();
 		outputDebugMessage("deleteAll complete.");
 		WAIT(0);
-		if (isPedInjured) {
+		if (isPedFighting) {
 			i--;
 		}
 		if (forceBreak) {
@@ -109,6 +116,9 @@ void Simulator::startSimulation() {
 	}
 }
 
+// record ped&veh states at each frame
+// stop when delegate tells it to stop
+// only start recording when the first vehicle appear on the screen
 void Simulator::processRecording(std::function<bool()> delegate, std::string fileName) {
 
 	std::ofstream record;
@@ -122,17 +132,13 @@ void Simulator::processRecording(std::function<bool()> delegate, std::string fil
 	int count = 0;
 	int carID = 0;
 	int pedID = PED_ID_OFFSET; // constant offset
+
+	// run delegate first to setup the initial positions of the cars 
+	if (!delegate()) {
+		return;
+	}
+
 	while (true) {
-		WAIT(0);
-
-		if (!delegate()) {
-			break;
-		}
-		if (startTick + data.recording.recordTime <= GetTickCount()) {
-			outputDebugMessage("Time limit reached. Stop recording.");
-			break;
-		}
-
 		bool seeACar = false;
 		for (int i = 0; i < GameResources::createdVehicles.size(); i++) {
 			Entity e = GameResources::createdVehicles[i].veh;
@@ -173,13 +179,33 @@ void Simulator::processRecording(std::function<bool()> delegate, std::string fil
 				record << count << "," << IDMap[e] << "," << coords2D.x << "," << coords2D.y << "," << coords3D.x << "," << coords3D.y << "," << coords3D.z << "," << heading << std::endl;
 			}
 		}
-		if (!seeACar && count == 0)
-			continue;
-		if (!seeACar && count != 0 && data.recording.stopWhenNoVehicles) {
-			outputDebugMessage("No vehicles on the screen. Break.");
+
+		DWORD maxTickCount = GetTickCount() + data.recording.recordInterval;
+		bool stopRecording = false;
+		while (GetTickCount() < maxTickCount) {
+			if (!delegate()) {
+				stopRecording = true;
+				break;
+			}
+			if (startTick + data.recording.recordTime <= GetTickCount()) {
+				outputDebugMessage("Time limit reached. Stop recording.");
+				stopRecording = true;
+				break;
+			}
+			WAIT(0);
+		}
+		if (stopRecording) {
 			break;
 		}
-		count++;
+		if (!seeACar && count != 0 && data.recording.stopWhenNoVehicles) {
+			outputDebugMessage("No vehicles in the recording range. Break.");
+			break;
+		}
+
+		// only start counting when the first vehicle appears on the recording range
+		if (seeACar || count != 0)
+			count++;;
+		
 	}
 	record.close();
 
@@ -219,6 +245,7 @@ void Simulator::setCars(SimulationData::VehSettings& settings) {
 			float speed = settings.speed.sample();
 
 			if (settings.wandering) {
+				v.scripted = false;
 				GameResources::createVehTask(v, [&]() {
 					AI::TASK_VEHICLE_DRIVE_WANDER(0, v.veh, speed, settings.driveStyle);
 				});
@@ -282,6 +309,7 @@ void Simulator::setPeds(SimulationData::PedSettings& settings) {
 
 			if (settings.wandering) {
 				PedWithMission& p = GameResources::spawnPedAtCoords(settings.model.c_str(), start);
+				p.scripted = false;
 				GameResources::createPedTask(p, [&]() {
 					AI::TASK_WANDER_IN_AREA(0, data.recording.recordCenter.x, data.recording.recordCenter.y, data.recording.recordCenter.z, data.recording.recordRadius, 0.0, 0.0);
 				});
@@ -308,7 +336,7 @@ void Simulator::setPeds(SimulationData::PedSettings& settings) {
 				outputDebugMessage("Going to " + std::to_string(goalNum) + "-th goal");
 				PedWithMission& p = GameResources::spawnPedAtCoords(settings.model.c_str(), start);
 				GameResources::createPedTask(p, [&]() {
-					AI::TASK_GO_STRAIGHT_TO_COORD(0, goal.x, goal.y, goal.z, 1.0 + settings.running, 200000, 0.0, 0.2);
+					AI::TASK_GO_STRAIGHT_TO_COORD(0, goal.x, goal.y, goal.z, 1.0 + settings.running, -1, 0.0, 0.2);
 				});
 			}
 			pedPositions.push_back(start);
@@ -408,6 +436,12 @@ void Simulator::processReplay(bool drawRainbow) {
 	int waitTime = data.replay.replayInterval;
 	int now = 0;
 
+	Cam cam;
+	if (data.camera.enabled) {
+		cam = GamePlay::activateCamera(data.camera.params);
+	}
+
+	bool forceBreak = false;
 	while (replayCoords.count(now) || predictCoords.count(now)) {
 		GamePlay::clearArea();
 
@@ -461,10 +495,18 @@ void Simulator::processReplay(bool drawRainbow) {
 		else {
 			GameResources::deleteAllCreated();
 		}
+		DWORD maxTickCount = GetTickCount() + waitTime;
+		while (GetTickCount() < maxTickCount) {
+			GamePlay::clearArea();
+			//	if (IsKeyJustUp(VK_NUMPAD5)) {
+			//		break;
+			//	}
+			if (IsKeyJustUp(VK_NUMPAD0)) {
+				forceBreak = true;
+				break;
+			}
 
-		if (predictCoords.count(now)) {
-			DWORD maxTickCount = GetTickCount() + waitTime;
-			while (GetTickCount() < maxTickCount) {
+			if (predictCoords.count(now)) {
 				//int stage = 1;
 				//while (true) {
 				//	if (IsKeyJustUp(VK_NUMPAD5)) {
@@ -485,7 +527,6 @@ void Simulator::processReplay(bool drawRainbow) {
 				//	if (IsKeyJustUp(VK_NUMPAD3)) {
 				//		stage = 3;
 				//	}
-				GamePlay::clearArea();
 				for (auto& p : predictCoords[now]) {
 					Entity ent = idMap[p.first];
 					Vector3 entPose = replayCoords[now][p.first].first;
@@ -524,30 +565,17 @@ void Simulator::processReplay(bool drawRainbow) {
 							}
 						}
 					}
-					//else if (stage == 3) {
-
-					//}
 				}
-				WAIT(0);
 			}
-		}
-		else {
-			//while (true) {
-			//	clearArea();
-			//	if (IsKeyJustUp(VK_NUMPAD5)) {
-			//		break;
-			//	}
-			//	if (IsKeyJustUp(VK_NUMPAD0)) {
-			//		if (now > 0) {
-			//			now -= 2;
-			//			break;
-			//		}
-			//	}
-			//	WAIT(0);
-			//}
-			WAIT(waitTime);
+			WAIT(0);
 		}
 		now++;
+		if (forceBreak) {
+			break;
+		}
 	}
 	GameResources::deleteAllCreated();
+	if (data.camera.enabled) {
+		GamePlay::destroyCamera(cam);
+	}
 }

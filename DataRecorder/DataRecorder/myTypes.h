@@ -148,6 +148,7 @@ struct Marker {
 	Color color;
 };
 
+// TODO: get a better name for this
 struct PedWithMission {
 	Ped ped;
 	TaskSequence task;
@@ -155,12 +156,13 @@ struct PedWithMission {
 	inline PedWithMission() : ped(0), task(0) {}
 };
 
+// to be precise, it is a vehicle with its driver with mission
 struct VehicleWithMission {
 	Ped driver;
 	Vehicle veh;
 	TaskSequence task;
 	bool scripted;
-	inline VehicleWithMission() : veh(0), driver(0), task(0) {}
+	inline VehicleWithMission() : veh(0), driver(0), task(0), scripted(true) {}
 };
 
 struct CameraParams {
@@ -199,11 +201,17 @@ struct MenuItem {
 	inline MenuItem(const std::string& LINE, const std::function<void()>& FUNCTION, const std::string& DESCRIPTION = "", bool* STATE = NULL, bool* ACTIVE = NULL, bool NEGATE_ACTIVE = false)
 		: line(LINE), function(FUNCTION), description(DESCRIPTION), state(STATE), active(ACTIVE), negateActive(NEGATE_ACTIVE) {}
 
+	// the text on the menu button
 	std::string line;
+	// the associated function
 	std::function<void()> function;
+	// the text shown as complementary description in the bottom
 	std::string description;
+	// reference to ON/OFF state of the menu item, if it can be specified in this way
 	bool* state;
+	// reference to a variable that controls whether the item can be used or not
 	bool* active;
+	// whether to negate the above mentioned reference to get item's activeness
 	bool negateActive;
 };
 
@@ -274,6 +282,8 @@ struct CarLane {
 	}
 };
 
+
+// define a range between two numbers (int, float, double, etc.)
 template <
 	typename T,
 	typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
@@ -313,20 +323,17 @@ struct NumericalRange {
 		}
 		else if (division == std::string::npos || division == range.size() - 1) {
 			outputDebugMessage("Invalid range input.");
-			minVal = 0;
-			maxVal = 0;
 		}
 		else {
 			std::string minStr = range.substr(0, division);
 			std::string maxStr = range.substr(division + 1);
 			if (!isFloat(minStr) || !isFloat(maxStr)) {
 				outputDebugMessage("Invalid range input.");
-				minVal = 0;
-				maxVal = 0;
 			}
-
-			minVal = std::stof(minStr);
-			maxVal = std::stof(maxStr);
+			else {
+				minVal = std::stof(minStr);
+				maxVal = std::stof(maxStr);
+			}
 		}
 		return *this;
 	}

@@ -17,6 +17,7 @@ using json = nlohmann::json;
 
 extern const std::string SIM_DATA_DIRECTORY;
 
+// manages the data to control replay/simulation
 class SimulationData {
 public:
 	struct {

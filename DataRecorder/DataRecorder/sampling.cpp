@@ -78,8 +78,8 @@ namespace Sampling {
 
 	void drawCrossFromTexture(Color color) {
 		static const Texture cross = createTexture("DataRecorder/cross.png");
+		static float aspectRatio = GRAPHICS::_GET_SCREEN_ASPECT_RATIO(false);
 		int screen_w, screen_h;
-		float aspectRatio = GRAPHICS::_GET_SCREEN_ASPECT_RATIO(false);
 		GRAPHICS::GET_SCREEN_RESOLUTION(&screen_w, &screen_h);
 		drawTexture(cross, 0, 0, 100, 15.0f / screen_w, 15.0f / screen_h / aspectRatio, 0.5, 0.5, 0.5, 0.5, 0.0, aspectRatio, (float)color.red/255, (float)color.green / 255, (float)color.blue / 255, (float)color.alpha / 255);
 	}

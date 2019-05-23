@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 
+// helper functions that are independent from game API's
+
 void outputDebugMessage(const std::string& s);
 
 std::vector<std::string> getFolderFileList(std::string folder);

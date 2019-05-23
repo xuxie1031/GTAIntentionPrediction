@@ -9,6 +9,10 @@
 #include "myEnums.h"
 #include "myTypes.h"
 
+// those functions are responsible for the creation, deletion, and update
+// for peds and vehs
+// ideally, the type PedWithMission and VehicleWithMission should only be used
+// by those functions
 namespace GameResources {
 	extern std::vector<PedWithMission> createdPeds;
 	extern std::vector<VehicleWithMission> createdVehicles;

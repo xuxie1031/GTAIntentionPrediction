@@ -4,6 +4,8 @@ const int Menu::NUMBER_OF_LINES_SHOW = 15;
 const float Menu::ITEM_CHAR_WIDTH = 6;
 const float Menu::CAPTION_CHAR_WIDTH = 10;
 const float Menu::DESCRIPTION_EXTRA_WIDTH = 100;
+const int MENU_CAPTION_FONT = 2;
+const int MENU_ITEM_LINE_FONT = 6;
 
 std::string Menu::makeLine(std::string text, bool *pState)
 {
@@ -64,27 +66,27 @@ void Menu::drawVertical(int lineActive) {
 		end = start + NUMBER_OF_LINES_SHOW;
 	}
 	lineActive--;
-	drawTextLine(caption, maxWidth, 8.0, 18.0, 5.0, 5.0, DefaultColor::white, DefaultColor::blue.makeTransparent(150), 0.7, 2);
+	drawTextLine(caption, maxWidth, 8.0, 18.0, 5.0, 5.0, DefaultColor::white, DefaultColor::blue.makeTransparent(150), 0.7, MENU_CAPTION_FONT);
 	for (int i = start; i < end; i++) {
 		if (i != lineActive)
 		{
 			if (isItemActive(i)) {
 				drawTextLine(makeLine(items[i].line, items[i].state),
-					maxWidth, 9.0, 65.0 + (i - start) * 40.0, 5.0, 9.0, DefaultColor::white.makeTransparent(150), DefaultColor::black.makeTransparent(150), 0.5, 6);
+					maxWidth, 9.0, 65.0 + (i - start) * 40.0, 5.0, 9.0, DefaultColor::white.makeTransparent(150), DefaultColor::black.makeTransparent(150), 0.5, MENU_ITEM_LINE_FONT);
 			}
 			else {
 				drawTextLine(makeLine(items[i].line, items[i].state),
-					maxWidth, 9.0, 65.0 + (i - start) * 40.0, 5.0, 9.0, DefaultColor::grey.makeTransparent(150), DefaultColor::black.makeTransparent(150), 0.5, 6);
+					maxWidth, 9.0, 65.0 + (i - start) * 40.0, 5.0, 9.0, DefaultColor::grey.makeTransparent(150), DefaultColor::black.makeTransparent(150), 0.5, MENU_ITEM_LINE_FONT);
 			}
 		}
 	}
 	if (lineActive < lineCount()) {
 		drawTextLine(makeLine(">" + items[lineActive].line, items[lineActive].state),
-			maxWidth, 9.0, 65.0 + (lineActive - start) * 40.0, 5.0, 9.0, DefaultColor::white, DefaultColor::black.makeTransparent(200), 0.5, 6);
+			maxWidth, 9.0, 65.0 + (lineActive - start) * 40.0, 5.0, 9.0, DefaultColor::white, DefaultColor::black.makeTransparent(200), 0.5, MENU_ITEM_LINE_FONT);
 		if (items[lineActive].description != "") {
 			drawTextLine(items[lineActive].description,
 				lineWidth(items[lineActive].description, false, true), 9.0,
-				65.0 + (end - start) * 40.0 + 15.0, 5.0, 9.0, DefaultColor::white, DefaultColor::black.makeTransparent(200), 0.5, 6);
+				65.0 + (end - start) * 40.0 + 15.0, 5.0, 9.0, DefaultColor::white, DefaultColor::black.makeTransparent(200), 0.5, MENU_ITEM_LINE_FONT);
 		}
 	}
 }

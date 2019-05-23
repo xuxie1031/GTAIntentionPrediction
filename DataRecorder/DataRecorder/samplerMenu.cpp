@@ -1,28 +1,5 @@
 #include "samplerMenu.h"
 
-// TODO: merge similar functions (e.g. resizeable lists)
-template <
-	typename T,
-	typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
->
-void setNumber(T& value, std::string& description) {
-	std::string text = GamePlay::getTextInput();
-	if (text != "" && isFloat(text)) {
-		value = std::stof(text);
-		description = text;
-	}
-}
-
-void setString(std::string& value, std::string& description) {
-	std::string text = GamePlay::getTextInput();
-	if (text != "") {
-		value = text;
-		description = value;
-	}
-}
-
-
-// It will be helpful to have this but may need some rework of the calling stack
 std::vector<Marker> createReferencePoints(SimulationData& data) {
 	std::vector<Marker> res;
 	for (auto& veh : data.vehicles) {
@@ -58,6 +35,27 @@ std::vector<Marker> createReferencePoints(SimulationData& data) {
 	return res;
 }
 
+// TODO: merge similar functions (e.g. resizeable lists)
+template <
+	typename T,
+	typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+>
+void setNumber(T& value, std::string& description) {
+	std::string text = GamePlay::getTextInput();
+	if (text != "" && isFloat(text)) {
+		value = std::stof(text);
+		description = text;
+	}
+}
+
+void setString(std::string& value, std::string& description) {
+	std::string text = GamePlay::getTextInput();
+	if (text != "") {
+		value = text;
+		description = value;
+	}
+}
+
 void setVector3d(SimulationData& data, Vector3d& value, std::string& description, std::string helpText, const Color& markerColor) {
 	auto reference = createReferencePoints(data);
 	auto res = Sampling::samplePoints(1, helpText, markerColor, reference, { value });
@@ -71,20 +69,10 @@ bool carLaneMenu(SimulationData& data, CarLane& lane, LPCSTR model) {
 	Menu laneMenu("Select a property to change", {});
 	bool deleting = false;
 	auto sampleFront = [&]() {
-		auto reference = createReferencePoints(data);
-		auto res = Sampling::samplePoints(1, "Mark the front of the lane.", DefaultColor::blue, reference);
-		if (!res.empty()) {
-			lane.front = res[0];
-			laneMenu.items[0].description = lane.front.to_string(); // TODO: add change description interface
-		}
+		setVector3d(data, lane.front, laneMenu.items[0].description, "Mark the front of the lane.", DefaultColor::blue);
 	};
 	auto sampleBack = [&]() {
-		auto reference = createReferencePoints(data);
-		auto res = Sampling::samplePoints(1, "Mark the back of the lane.", DefaultColor::green, reference);
-		if (!res.empty()) {
-			lane.back = res[0];
-			laneMenu.items[1].description = lane.back.to_string();
-		}
+		setVector3d(data, lane.back, laneMenu.items[1].description, "Mark the back of the lane.", DefaultColor::green);
 	};
 
 	auto sampleHeading = [&]() {
@@ -119,18 +107,21 @@ bool individualVehicleMenu(SimulationData& data, SimulationData::VehSettings& ve
 		vehSettings.wandering = !vehSettings.wandering;
 	};
 
+	// There are some duplicates of these "group list" functions
+	// I keep these to avoid using template
+	// TODO:: refactor if you want
 	auto setVehicleStarts = [&]() {
 		Menu vehicleStartsList("Select a start lane configuration", {});
 		int count = 0;
 
 		auto carLaneBinder = [&](int i) {
 			if (!carLaneMenu(data, vehSettings.starts[i], vehSettings.vehModel.c_str())) {
+				// prevent deleting self before finishing execution
 				auto self = std::move(vehicleStartsList.items[i].function);
 				vehSettings.starts.erase(vehSettings.starts.begin() + i);
 				vehicleStartsList.deleteItem(vehicleStartsList.lineCount() - 2);
 			}
 		};
-
 
 		for (int i = 0; i < vehSettings.starts.size(); i++) {
 			vehicleStartsList.addMenuItem({ "Lane " + std::to_string(i), std::bind(carLaneBinder , i) });
