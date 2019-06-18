@@ -8,14 +8,18 @@ void Simulator::startSimulation() {
 	Cam cam;
 	if (data.camera.enabled) {
 		cam = GamePlay::activateCamera(data.camera.params);
+		GamePlay::setPlayerDisappear(true);
 	}
 
 	// for each generation setting, use one DWORD to record the next time instance for repeated generation.
 	// tick is set to 0 to indicate disabled generation.
 	std::vector<DWORD> nextTickCountPed;
 	std::vector<DWORD> nextTickCountVeh;
-	bool isPedFighting;
+	bool isAccident;
 	bool forceBreak;
+
+	std::vector<int> numPeds;
+	std::vector<int> numVehs;
 
 	// I made this a lambda to separate the recording function from checking termination conditions and
 	// making other updates
@@ -28,22 +32,35 @@ void Simulator::startSimulation() {
 
 		for (int i = 0; i < data.peds.size(); i++) {
 			if (nextTickCountPed[i] != 0 && nextTickCountPed[i] <= currentTick) {
-				setPeds(data.peds[i]);
 				if (data.peds[i].continuousGeneration) {
+					setPeds(data.peds[i]);
 					nextTickCountPed[i] = currentTick + data.peds[i].generationInterval.sample();
 				}
 				else {
+					if (data.recording.useTotalPedNumber) {
+						setPeds(data.peds[i], numPeds[i]);
+					}
+					else {
+						setPeds(data.peds[i]);
+					}
 					nextTickCountPed[i] = 0;
+
 				}
 			}
 		}
 		for (int i = 0; i < data.vehicles.size(); i++) {
 			if (nextTickCountVeh[i] != 0 && nextTickCountVeh[i] <= currentTick) {
-				setCars(data.vehicles[i]);
 				if (data.vehicles[i].continuousGeneration) {
+					setCars(data.vehicles[i]);
 					nextTickCountVeh[i] = currentTick + data.vehicles[i].generationInterval.sample();
 				}
 				else {
+					if (data.recording.useTotalVehicleNumber) {
+						setCars(data.vehicles[i], numVehs[i]);
+					}
+					else {
+						setCars(data.vehicles[i]);
+					}
 					nextTickCountVeh[i] = 0;
 				}
 			}
@@ -52,9 +69,15 @@ void Simulator::startSimulation() {
 		for (int i = 0; i < GameResources::createdVehicles.size(); i++) {
 			if (PED::IS_PED_IN_MELEE_COMBAT(GameResources::createdVehicles[i].driver)) {
 				outputDebugMessage("Ped fighting. Break.");
-				isPedFighting = true;
+				isAccident = true;
 				return false;
 			}
+			if (ENTITY::HAS_ENTITY_COLLIDED_WITH_ANYTHING(GameResources::createdVehicles[i].veh)) {
+				outputDebugMessage("Car collided with something. Break.");
+				isAccident = true;
+				return false;
+			}
+
 			if (AI::GET_SEQUENCE_PROGRESS(GameResources::createdVehicles[i].driver) == -1) {
 				outputDebugMessage("Deleting Car " + std::to_string(i));
 				GameResources::deleteVeh(i);
@@ -63,9 +86,9 @@ void Simulator::startSimulation() {
 		}
 
 		for (int i = 0; i < GameResources::createdPeds.size(); i++) {
-			if (PED::IS_PED_IN_MELEE_COMBAT(GameResources::createdPeds[i].ped)) {
+			if (PED::IS_PED_IN_MELEE_COMBAT(GameResources::createdPeds[i].ped) || PED::IS_PED_RAGDOLL(GameResources::createdPeds[i].ped)) {
 				outputDebugMessage("Ped fighting. Break.");
-				isPedFighting = true;
+				isAccident = true;
 				return false;
 			}
 			if (AI::GET_SEQUENCE_PROGRESS(GameResources::createdPeds[i].ped) == -1) {
@@ -97,13 +120,60 @@ void Simulator::startSimulation() {
 		for (auto& veh : data.vehicles) {
 			nextTickCountVeh.push_back(veh.startTime + startTick);
 		}
-		isPedFighting = false;
+		if (data.recording.useTotalPedNumber) {
+			numPeds = std::vector<int>(data.peds.size(), 0);
+			int total = data.recording.totalPedNumber.sample();
+			int numGroups = 0;
+			for (auto setting : data.peds) {
+				if (!setting.continuousGeneration) {
+					numGroups++;
+				}
+			}
+			if (numGroups != 0) {
+				std::vector<int> counts(numGroups, 0);
+				for (int i = 0; i < total; i++) {
+					int group = randomInt(0, numGroups - 1);
+					counts[group]++;
+				}
+				for (int i = 0; i < data.peds.size(); i++) {
+					if (!data.peds[i].continuousGeneration) {
+						numPeds[i] = counts.back();
+						counts.pop_back();
+					}
+				}
+			}
+		}
+		if (data.recording.useTotalVehicleNumber) {
+			numVehs = std::vector<int>(data.vehicles.size(), 0);
+			int total = data.recording.totalVehicleNumber.sample();
+			int numGroups = 0;
+			for (auto setting : data.vehicles) {
+				if (!setting.continuousGeneration) {
+					numGroups++;
+				}
+			}
+			if (numGroups != 0) {
+				std::vector<int> counts(numGroups, 0);
+				for (int i = 0; i < total; i++) {
+					int group = randomInt(0, numGroups - 1);
+					counts[group]++;
+				}
+				for (int i = 0; i < data.vehicles.size(); i++) {
+					if (!data.vehicles[i].continuousGeneration) {
+						numVehs[i] = counts.back();
+						counts.pop_back();
+					}
+				}
+			}
+		}
+		isAccident = false;
 		forceBreak = false;
+		outputDebugMessage("initialize variables complete.");
 		processRecording(delegate, "record" + std::to_string(i));
 		GameResources::deleteAllCreated();
 		outputDebugMessage("deleteAll complete.");
 		WAIT(0);
-		if (isPedFighting) {
+		if (isAccident) {
 			i--;
 		}
 		if (forceBreak) {
@@ -113,6 +183,7 @@ void Simulator::startSimulation() {
 
 	if (data.camera.enabled) {
 		GamePlay::destroyCamera(cam);
+		GamePlay::setPlayerDisappear(false);
 	}
 }
 
@@ -211,7 +282,7 @@ void Simulator::processRecording(std::function<bool()> delegate, std::string fil
 
 }
 
-void Simulator::setCars(SimulationData::VehSettings& settings) {
+void Simulator::setCars(SimulationData::VehSettings& settings, int totalCars) {
 	if (settings.starts.size() == 0) {
 		outputDebugMessage("Start point for cars not specified.");
 		return;
@@ -221,7 +292,9 @@ void Simulator::setCars(SimulationData::VehSettings& settings) {
 
 	// randomly distribute cars on each lane
 	std::vector<int> numCars(settings.starts.size(), 0);
-	int totalCars = settings.number.sample();
+	if (totalCars == -1) {
+		totalCars = settings.number.sample();
+	}
 	for (int i = 0; i < totalCars; i++) {
 		int lane = randomInt(0, numCars.size()-1);
 		numCars[lane]++;
@@ -272,7 +345,7 @@ void Simulator::setCars(SimulationData::VehSettings& settings) {
 
 }
 
-void Simulator::setPeds(SimulationData::PedSettings& settings) {
+void Simulator::setPeds(SimulationData::PedSettings& settings, int totalPeds) {
 	if (settings.starts.size() == 0) {
 		outputDebugMessage("Start point for peds not specified.");
 		return;
@@ -281,7 +354,9 @@ void Simulator::setPeds(SimulationData::PedSettings& settings) {
 
 	// randomly distribute peds in each area
 	std::vector<int> numPeds(settings.starts.size(), 0);
-	int totalPeds = settings.number.sample();
+	if (totalPeds == -1) {
+		totalPeds = settings.number.sample();
+	}
 	for (int i = 0; i < totalPeds; i++) {
 		int area = randomInt(0, numPeds.size() - 1);
 		numPeds[area]++;

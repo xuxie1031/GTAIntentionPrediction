@@ -12,6 +12,10 @@ void SimulationData::initialize() {
 	recording.recordTime = 60000;
 	recording.stopWhenNoVehicles = false;
 	recording.recordDirectory = "";
+	recording.useTotalVehicleNumber = false;
+	recording.totalVehicleNumber = { 0, 0 };
+	recording.useTotalPedNumber = false;
+	recording.totalPedNumber = { 0, 0 };
 
 	replay.replayInterval = DEFAULT_INTERVAL;
 	replay.replayFile = "";
@@ -58,6 +62,18 @@ void SimulationData::loadData(std::string fileName) {
 		}
 		if (data["recording"].count("stopWhenAllCarLeaves")) {
 			recording.stopWhenNoVehicles = data["recording"]["stopWhenAllCarLeaves"];
+		}
+		if (data["recording"].count("useTotalVehicleNumber")) {
+			recording.useTotalVehicleNumber = data["recording"]["useTotalVehicleNumber"];
+		}
+		if (data["recording"].count("totalVehicleNumber")) {
+			recording.totalVehicleNumber = data["recording"]["totalVehicleNumber"];
+		}
+		if (data["recording"].count("useTotalPedNumber")) {
+			recording.useTotalPedNumber = data["recording"]["useTotalPedNumber"];
+		}
+		if (data["recording"].count("totalPedNumber")) {
+			recording.totalPedNumber = data["recording"]["totalPedNumber"];
 		}
 		if (data["recording"].count("recordDirectory") && data["recording"]["recordDirectory"].is_string()) {
 			recording.recordDirectory = data["recording"]["recordDirectory"].get<std::string>();
@@ -214,6 +230,10 @@ void SimulationData::saveData(std::string fileName) {
 	formarttedData["recording"]["recordTime"] = recording.recordTime;
 	formarttedData["recording"]["stopWhenAllCarLeaves"] = recording.stopWhenNoVehicles;
 	formarttedData["recording"]["recordDirectory"] = recording.recordDirectory;
+	formarttedData["recording"]["useTotalVehicleNumber"] = recording.useTotalVehicleNumber;
+	formarttedData["recording"]["totalVehicleNumber"] = recording.totalVehicleNumber.to_json();
+	formarttedData["recording"]["useTotalPedNumber"] = recording.useTotalPedNumber;
+	formarttedData["recording"]["totalPedNumber"] = recording.totalPedNumber.to_json();
 
 	formarttedData["replay"]["replayInterval"] = replay.replayInterval;
 	formarttedData["replay"]["replayFile"] = replay.replayFile;

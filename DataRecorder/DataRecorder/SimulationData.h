@@ -27,6 +27,14 @@ public:
 		DWORD recordInterval; // interval between two recordings in ms
 		DWORD recordTime;
 		bool stopWhenNoVehicles;
+		// if enabled, individual vehicle number settings will be disabled
+		// for no continuously generated groups
+		bool useTotalVehicleNumber;
+		// controls the total number of vehicles that are generated only once
+		// override to individual vehicle number settings
+		NumericalRange<int> totalVehicleNumber;
+		bool useTotalPedNumber;
+		NumericalRange<int> totalPedNumber;
 		std::string recordDirectory;
 	} recording;
 
@@ -42,7 +50,7 @@ public:
 	} camera;
 
 	struct VehSettings {
-		inline VehSettings() : wandering(false), stopRange(2.0), driveStyle(786475), speed(3.0,6.0), number(1,1), startTime(0),continuousGeneration(false), vehModel("Adder") {}
+		inline VehSettings() : wandering(false), stopRange(2.0), driveStyle(786475), speed(9.0,12.0), number(1,1), startTime(0),continuousGeneration(false), vehModel("Adder") {}
 		bool wandering;
 		std::vector<CarLane> starts;
 		// Goals are single points since small variations of goals will be corrected by the navigation

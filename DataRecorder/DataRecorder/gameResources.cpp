@@ -35,7 +35,7 @@ namespace GameResources {
 		else {
 			p.ped = PED::CREATE_RANDOM_PED(coords.x, coords.y, coords.z);
 		}
-		PED::SET_PED_MAX_HEALTH(p.ped, 100);
+		PED::SET_PED_CAN_EVASIVE_DIVE(p.ped, false);
 		createdPeds.push_back(p);
 
 		return createdPeds.back();
@@ -54,7 +54,7 @@ namespace GameResources {
 		else {
 			vehicle.driver = PED::CREATE_RANDOM_PED_AS_DRIVER(vehicle.veh, true);
 		}
-		PED::SET_PED_MAX_HEALTH(vehicle.driver, 100);
+		PED::SET_PED_CAN_EVASIVE_DIVE(vehicle.driver, false);
 
 		return vehicle;
 	}

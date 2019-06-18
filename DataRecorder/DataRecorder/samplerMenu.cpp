@@ -117,7 +117,10 @@ bool individualVehicleMenu(SimulationData& data, SimulationData::VehSettings& ve
 		auto carLaneBinder = [&](int i) {
 			if (!carLaneMenu(data, vehSettings.starts[i], vehSettings.vehModel.c_str())) {
 				// prevent deleting self before finishing execution
-				auto self = std::move(vehicleStartsList.items[i].function);
+				std::function<void()> self;
+				if (i == vehicleStartsList.lineCount() - 2) {
+					self = std::move(vehicleStartsList.items[i].function);
+				}
 				vehSettings.starts.erase(vehSettings.starts.begin() + i);
 				vehicleStartsList.deleteItem(vehicleStartsList.lineCount() - 2);
 			}
@@ -263,7 +266,12 @@ bool individualVehicleMenu(SimulationData& data, SimulationData::VehSettings& ve
 	vehicleSettingsMenu.addMenuItem({"Stop Range", setVehicleStopRange, std::to_string(vehSettings.stopRange) ,  NULL, &(vehSettings.wandering), true });
 	vehicleSettingsMenu.addMenuItem({"Speed", setVehicleSpeed, vehSettings.speed.to_string() });
 	vehicleSettingsMenu.addMenuItem({ "Car Interval", setCarInterval, vehSettings.carInterval.to_string() });
-	vehicleSettingsMenu.addMenuItem({ "Number", setVehicleNumber, vehSettings.number.to_string() });
+	if (data.recording.useTotalVehicleNumber) {
+		vehicleSettingsMenu.addMenuItem({ "Number", setVehicleNumber, vehSettings.number.to_string(), NULL, &(vehSettings.continuousGeneration)});
+	}
+	else {
+		vehicleSettingsMenu.addMenuItem({ "Number", setVehicleNumber, vehSettings.number.to_string() });
+	}
 	vehicleSettingsMenu.addMenuItem({ "Start Time", setVehicleStartTime, std::to_string(vehSettings.startTime) });
 	vehicleSettingsMenu.addMenuItem({ "Continuous Generation", switchContinuousGeneration, "", &(vehSettings.continuousGeneration) });
 	vehicleSettingsMenu.addMenuItem({ "Generation Interval", setVehicleGenerationInterval, vehSettings.generationInterval.to_string(),  NULL, &(vehSettings.continuousGeneration) });
@@ -281,7 +289,10 @@ void vehicleMenu(SimulationData& data) {
 
 		auto individualVehBinder = [&](int i) {
 			if (!individualVehicleMenu(data, data.vehicles[i], i)) {
-				auto self = std::move(vehicleGroupList.items[i].function);
+				std::function<void()> self;
+				if (i == vehicleGroupList.lineCount() - 2) {
+					self = std::move(vehicleGroupList.items[i].function);
+				}
 				data.vehicles.erase(data.vehicles.begin() + i);
 				vehicleGroupList.deleteItem(vehicleGroupList.lineCount() - 2);
 			}
@@ -361,7 +372,10 @@ bool individualPedMenu(SimulationData& data, SimulationData::PedSettings& pedSet
 
 		auto unitAreaBinder = [&](int i) {
 			if (!unitAreaMenu(data, areaData[i], isGoal)) {
-				auto self = std::move(pedAreaList.items[i].function);
+				std::function<void()> self;
+				if (i == pedAreaList.lineCount() - 2) {
+					self = std::move(pedAreaList.items[i].function);
+				}
 				areaData.erase(areaData.begin() + i);
 				pedAreaList.deleteItem(pedAreaList.lineCount() - 2);
 			}
@@ -479,7 +493,12 @@ bool individualPedMenu(SimulationData& data, SimulationData::PedSettings& pedSet
 	pedSettingsMenu.addMenuItem({ "Goals", std::bind(setPedArea, true), "",  NULL, &(pedSettings.wandering), true });
 	pedSettingsMenu.addMenuItem({ "Model", setPedModel , pedSettings.model });
 	pedSettingsMenu.addMenuItem({ "Running", switchPedRunning, "", &(pedSettings.running), &(pedSettings.wandering), true });
-	pedSettingsMenu.addMenuItem({ "Number", setPedNumber, pedSettings.number.to_string() });
+	if (data.recording.useTotalPedNumber) {
+		pedSettingsMenu.addMenuItem({ "Number", setPedNumber, pedSettings.number.to_string(),  NULL, &(pedSettings.continuousGeneration) });
+	}
+	else {
+		pedSettingsMenu.addMenuItem({ "Number", setPedNumber, pedSettings.number.to_string() });
+	}
 	pedSettingsMenu.addMenuItem({ "Start Time", setPedStartTime, std::to_string(pedSettings.startTime) });
 	pedSettingsMenu.addMenuItem({ "Continuous Generation", switchContinuousGeneration, "", &(pedSettings.continuousGeneration) });
 	pedSettingsMenu.addMenuItem({ "Generation Interval", setPedGenerationInterval, pedSettings.generationInterval.to_string(),  NULL, &(pedSettings.continuousGeneration) });
@@ -497,7 +516,10 @@ void pedMenu(SimulationData& data) {
 
 	auto individualPedBinder = [&](int i) {
 		if (!individualPedMenu(data, data.peds[i], i)) {
-			auto self = std::move(pedGroupList.items[i].function);
+			std::function<void()> self;
+			if (i == pedGroupList.lineCount() - 2) {
+				self = std::move(pedGroupList.items[i].function);
+			}
 			data.peds.erase(data.peds.begin() + i);
 			pedGroupList.deleteItem(pedGroupList.lineCount() - 2);
 		}
@@ -554,8 +576,29 @@ void recordingMenu(SimulationData& data) {
 		data.recording.stopWhenNoVehicles = !data.recording.stopWhenNoVehicles;
 	};
 
+	auto switchUseTotalVehicleNumber = [&]() {
+		data.recording.useTotalVehicleNumber = !data.recording.useTotalVehicleNumber;
+	};
+	auto setTotalVehicleNumber = [&]() {
+		std::string totalVehicleNumber = GamePlay::getTextInput();
+		if (totalVehicleNumber != "") {
+			data.recording.totalVehicleNumber = totalVehicleNumber;
+			recordingOptions.items[8].description = data.recording.totalVehicleNumber.to_string();
+		}
+	};
+	auto switchUseTotalPedNumber = [&]() {
+		data.recording.useTotalPedNumber = !data.recording.useTotalPedNumber;
+	};
+	auto setTotalPedNumber = [&]() {
+		std::string totalPedNumber = GamePlay::getTextInput();
+		if (totalPedNumber != "") {
+			data.recording.totalPedNumber = totalPedNumber;
+			recordingOptions.items[10].description = data.recording.totalPedNumber.to_string();
+		}
+	};
+
 	auto setRecordDirectory = [&]() {
-		setString(data.recording.recordDirectory, recordingOptions.items[7].description);
+		setString(data.recording.recordDirectory, recordingOptions.items[11].description);
 	};
 
 	recordingOptions.addMenuItem({ "Record Center", setRecordCenter, data.recording.recordCenter.to_string() });
@@ -565,6 +608,12 @@ void recordingMenu(SimulationData& data) {
 	recordingOptions.addMenuItem({ "Record Interval", setRecordInterval, std::to_string(data.recording.recordInterval) });
 	recordingOptions.addMenuItem({ "Record Time", setRecordTime, std::to_string(data.recording.recordTime) });
 	recordingOptions.addMenuItem({ "Stop When No Vehicles", switchStopWhenNoVehicles, "", &(data.recording.stopWhenNoVehicles) });
+
+	recordingOptions.addMenuItem({ "Use Total Vehicle Number", switchUseTotalVehicleNumber, "", &(data.recording.useTotalVehicleNumber) });
+	recordingOptions.addMenuItem({ "Total Vehicle Number", setTotalVehicleNumber, data.recording.totalVehicleNumber.to_string(), NULL, &(data.recording.useTotalVehicleNumber) });
+	recordingOptions.addMenuItem({ "Use Total Ped Number", switchUseTotalPedNumber, "", &(data.recording.useTotalPedNumber) });
+	recordingOptions.addMenuItem({ "Total Ped Number", setTotalPedNumber, data.recording.totalPedNumber.to_string(), NULL, &(data.recording.useTotalPedNumber) });
+
 	recordingOptions.addMenuItem({ "Record Directory", setRecordDirectory, data.recording.recordDirectory });
 
 	recordingOptions.processMenu();

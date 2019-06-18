@@ -40,9 +40,14 @@ void main()
 		loadSettingsList.processMenu();
 	};
 
+	auto newSettings = [&]() {
+		data.initialize();
+		mainMenu.items[6].description = data.getSettingsFileName();
+	};
+
 	mainMenu.addMenuItem({ "Load Settings",      loadSettings });
 	mainMenu.addMenuItem({ "Save Settings",      saveSettings, data.getSettingsFileName() });
-	mainMenu.addMenuItem({ "New Settings",      std::bind(&SimulationData::initialize, &data) });
+	mainMenu.addMenuItem({ "New Settings",       newSettings });
 	mainMenu.addMenuItem({ "Start Simulation",      std::bind(&Simulator::startSimulation, &sim) });
 	mainMenu.addMenuItem({ "Start Replay", std::bind(&Simulator::processReplay, &sim, true) });
 	

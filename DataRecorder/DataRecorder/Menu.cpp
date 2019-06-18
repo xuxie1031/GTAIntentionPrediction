@@ -1,6 +1,6 @@
 #include "Menu.h"
 
-const int Menu::NUMBER_OF_LINES_SHOW = 15;
+const int Menu::NUMBER_OF_LINES_SHOW = 12;
 const float Menu::ITEM_CHAR_WIDTH = 6;
 const float Menu::CAPTION_CHAR_WIDTH = 10;
 const float Menu::DESCRIPTION_EXTRA_WIDTH = 100;

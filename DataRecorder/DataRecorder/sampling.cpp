@@ -89,7 +89,7 @@ namespace Sampling {
 		Vector3d playerCoords = ENTITY::GET_ENTITY_COORDS(p, !ENTITY::IS_ENTITY_DEAD(p));
 		Vector3d cameraCoords = CAM::GET_CAM_COORD(cam);
 
-		if (SYSTEM::VDIST(playerCoords.x, playerCoords.y, playerCoords.z, cameraCoords.x, cameraCoords.y, cameraCoords.z) > 100) {
+		if (GAMEPLAY::GET_DISTANCE_BETWEEN_COORDS(playerCoords.x, playerCoords.y, playerCoords.z, cameraCoords.x, cameraCoords.y, cameraCoords.z,false) > 100) {
 			GamePlay::teleportPlayer(cameraCoords);
 		}
 	}
@@ -182,6 +182,9 @@ namespace Sampling {
 			});
 
 		while (true) {
+
+			GamePlay::clearArea();
+
 			InstructionButtons::getInstance()->render();
 
 			if (GetTickCount() < tempHelpTimeout) {
@@ -306,6 +309,9 @@ namespace Sampling {
 			});
 
 		while (true) {
+
+			GamePlay::clearArea();
+
 			InstructionButtons::getInstance()->render();
 
 			if (GetTickCount() < tempHelpTimeout) {
