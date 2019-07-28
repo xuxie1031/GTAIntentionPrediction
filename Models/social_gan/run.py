@@ -44,8 +44,8 @@ def evaluate(args, batch, generator):
                 veh_pred_fake, _ = veh_ped_seperate(pred_fake, ids)
                 veh_pred_data, _ = veh_ped_seperate(pred_data, ids)
 
-                error = displacement_error(veh_pred_fake, veh_pred_data)
-                # error = final_displacement_error(veh_pred_fake, veh_pred_data)
+                # error = displacement_error(veh_pred_fake, veh_pred_data)
+                error = final_displacement_error(veh_pred_fake, veh_pred_data)
                 err_samples += error.item()
             
             err_samples /= args.num_samples
@@ -267,10 +267,10 @@ def main():
     parser.add_argument('--encoder_h_dim_d', type=int, default=64)
     parser.add_argument('--clip_th_d', type=float, default=0.0)
     parser.add_argument('--lr_d', type=float, default=5e-4)
-    parser.add_argument('--steps_d', type=int, default=2)
+    parser.add_argument('--steps_d', type=int, default=1)
 
-    parser.add_argument('--l2_loss_weight', type=float, default=0.0)
-    parser.add_argument('--best_k', type=int, default=1)
+    parser.add_argument('--l2_loss_weight', type=float, default=1.0)
+    parser.add_argument('--best_k', type=int, default=5)
     parser.add_argument('--num_samples', type=int, default=1)
 
     parser.add_argument('--use_cuda', type=int, default=1)

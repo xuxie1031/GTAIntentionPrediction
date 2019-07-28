@@ -156,8 +156,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                 veh_pred_data = data_revert(veh_pred_data, first_values_dict)
                 ret_seq = data_revert(ret_seq, first_values_dict)
 
-                # error = displacement_error(ret_seq, veh_pred_data)
-                error = final_displacement_error(ret_seq[-1], veh_pred_data[-1])
+                error = displacement_error(ret_seq, veh_pred_data)
+                # error = final_displacement_error(ret_seq[-1], veh_pred_data[-1])
 
                 err_batch += error.item()
             

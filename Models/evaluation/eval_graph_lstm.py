@@ -106,7 +106,9 @@ def eval_model(data_dir, net, args):
                 pred_frame = frames[-args.pred_len]
                 for i in range(len(veh_ids)):
                     for k in range(args.best_k):
-                        eval_f.write(str(pred_frame)+','+str(veh_ids[i])+','+str(k_ret_seq[k, -1, i, 0])+','+str(k_ret_seq[k, -1, i, 1])+'\n')
+                        # eval_f.write(str(pred_frame)+','+str(veh_ids[i])+','+str(k_ret_seq[k, -1, i, 0])+','+str(k_ret_seq[k, -1, i, 1])+'\n')
+                        for t in range(args.pred_len):
+                            eval_f.write(str(k)+','+str(pred_frame)+','+str(veh_ids[i])+','+str(k_ret_seq[k, t, i, 0])+','+str(k_ret_seq[k, t, i, 1])+'\n')
         eval_f.close()
 
 

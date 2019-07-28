@@ -36,7 +36,7 @@ def parse_file_trajs(filename, args, delim=','):
             curr_agent_seq = np.around(curr_agent_seq, decimals=4)
             agent_front = frames.index(curr_agent_seq[0, 0])-idx
             agent_end = frames.index(curr_agent_seq[-1, 0])-idx+1
-            if agent_end-agent_front != seq_len: continue
+            if agent_end-agent_front != seq_len or len(curr_agent_seq) != seq_len: continue
             
             curr_agent_seq = np.transpose(curr_agent_seq[:, 4:6])
             _idx = num_nodes
