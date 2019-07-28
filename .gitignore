@@ -4,7 +4,7 @@
 *.csv
 
 venv
-# dataset
+dataset
 
 record*
 *.pth.tar
