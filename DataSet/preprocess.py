@@ -1,5 +1,5 @@
 '''
-format orginal dataset data into (frame, id, local x, local y)
+format orginal dataset data into (frame, id, local x, local y, .etc)
 divide dataset data into 'train' / 'test'
 '''
 
