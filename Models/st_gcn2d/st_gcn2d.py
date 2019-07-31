@@ -10,7 +10,7 @@ class GraphConvNet2D(nn.Module):
         self.s_kernel_size = s_kernel_size
         self.conv = nn.Conv2d(in_channels, out_channels*s_kernel_size, 
                               kernel_size=(t_kernel_size, 1),
-                              padding=(t_padding, 1),
+                              padding=(t_padding, 0),
                               stride=(t_stride, 1),
                               dilation=(t_dilation, 1),
                               bias=bias)
@@ -83,9 +83,11 @@ class ST_GCN2D(nn.Module):
 
 
 class STGCN2DModel(nn.Module):
-    def __init__(self, in_channels, spatial_kernel_size, temporal_kernel_size, dec_hidden_size, **kwargs):
+    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, dec_hidden_size, out_dim, use_cuda=True, **kwargs):
         super(STGCN2DModel, self).__init__()
 
+        self.pred_len = pred_len
+        self.out_dim = out_dim
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
         kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
 
@@ -103,11 +105,14 @@ class STGCN2DModel(nn.Module):
         ))
 
         self.dec_lstm = nn.LSTM(256, dec_hidden_size)
+        self.output = nn.Linear(dec_hidden_size, out_dim)
 
-    
-    def forward(self, x):
-        # init graphs on batch
+        if use_cuda:
+            self.to(torch.device('cuda:0'))
 
+
+    # x (N, C, T, V); A (N, K, V, V); o_pred (N, pred_len, V, 5)
+    def forward(self, x, A, o_pred):
         N, C, T, V = x.size()
         x = x.permute(0, 3, 1, 2).contiguous()
         x = x.view(N, V*C, T)
@@ -115,3 +120,20 @@ class STGCN2DModel(nn.Module):
         x = data_bn(x)
         x = x.view(N, V, C, T)
         x = x.permute(0, 2, 3, 1).contiguous()
+
+        for gcn in self.st_gcn2d_modules:
+            x, _ = gcn(x, A)
+        
+        x = x.permute(0, 3, 1, 2).contiguous()
+        data_pool = nn.AvgPool1d(T)
+        x = data_pool(x)
+        x = x.view(-1, V, C)
+
+        # prediction
+        for i, data in enumerate(x):
+            data = data.repeat(self.pred_len, 1, 1)
+            h_dec, _ = self.dec_lstm(data)
+            o = self.output(h_dec)
+            o_pred[i, :] = o
+        
+        return output_activation(o_pred)
