@@ -10,28 +10,69 @@ class WriteOnceDict(dict):
 			super(WriteOnceDict, self).__setitem__(key, value)
 
 
-def data_vectorize(data_seq):
-    first_value_dict = WriteOnceDict()
-    vectorized_seq = data_seq.clone()
+def data_batch(input_data_list, pred_data_list, num_list):
+    num2input_dict = {}
+    num2pred_dict = {}
+    for i, num in enumerate(num_list):
+        if num not in num2input_dict.keys(): num2input_dict[num] = []
+        num2input_dict[num].append(input_data_list[i])
 
-    num_nodes = data_seq.size(1)
-    for i, frame in enumerate(data_seq):
-        for node in range(num_nodes):
-            first_value_dict[node] = frame[node, :]
-            vectorized_seq[i, node, :] = frame[node, :]-first_value_dict[node]
+        if num not in num2pred_dict.keys(): num2pred_dict[num] = []
+        num2pred_dict[num].append(pred_data_list[i])
     
-    return vectorized_seq, first_value_dict
+    return num2input_dict, num2pred_dict
 
 
-def data_revert(data_seq, first_value_dict):
-    reverted_seq = data_seq.clone()
+def data_feeder(batch_data):
+    N, T, V, _ = batch_data.size()
+    data = torch.zeros(N, T, V, V, 4)
+    for i in range(V):
+        for j in range(V):
+            data[:, :, i, j, :2] = batch_data[:, :, i, :2]
+            data[:, :, i, j, 2:] = batch_data[:, :, j, :2]
+    data = data.permute(0, 4, 1, 2, 3).contiguous()
 
-    num_nodes = data_seq.size(1)
-    for i, frame in enumerate(data_seq):
+    return data
+
+
+def data_vectorize(batch_data_seq):
+    batch_vectorized_seq = []
+    first_value_dicts = []
+    for data_seq in batch_data_seq:
+        first_value_dict = WriteOnceDict()
+        vectorized_seq = []
+
+        num_nodes = data_seq.size(1)
+        frame0 = data_seq[0, :]
         for node in range(num_nodes):
-            reverted_seq[i, node, :] = frame[node, :]+first_value_dict[node]
-    
-    return reverted_seq
+            first_value_dict[node] = frame0[node, :]
+        for i in range(1, len(data_seq)):
+            frame = data_seq[i]
+            vectorized_frame = torch.zeros(num_nodes, data_seq.size(-1))
+            for node in range(num_nodes):
+                vectorized_frame[node] = frame[node, :]-first_value_dict[node]
+            vectorized_seq.append(vectorized_frame)
+        batch_vectorized_seq.append(torch.stack(vectorized_seq))
+        first_value_dicts.append(first_value_dict)
+
+    return torch.stack(batch_vectorized_seq), first_value_dicts
+
+
+def data_revert(batch_data_seq, first_value_dicts):
+    batch_reverted_seq = []
+
+    for i in range(len(batch_data_seq)):
+        data_seq = batch_data_seq[i]
+        first_value_dict = first_value_dicts[i]
+        reverted_seq = data_seq.clone()
+
+        num_nodes = data_seq.size(1)
+        for j, frame in enumerate(data_seq):
+            for node in range(num_nodes):
+                reverted_seq[j, node, :] = frame[node, :]+first_value_dict[node]
+        batch_reverted_seq.append(reverted_seq)
+
+    return batch_reverted_seq
 
 
 def output_activation(x):

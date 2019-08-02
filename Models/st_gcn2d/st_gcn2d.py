@@ -111,9 +111,11 @@ class STGCN2DModel(nn.Module):
             self.to(torch.device('cuda:0'))
 
 
-    # x (N, C, T, V); A (N, K, V, V); o_pred (N, pred_len, V, 5)
-    def forward(self, x, A, o_pred):
+    # x (N, C, T, V); A (N, K, V, V)
+    def forward(self, x, A):
         N, C, T, V = x.size()
+        o_pred = torch.zeros(N, self.pred_len, V, self.out_dim)
+
         x = x.permute(0, 3, 1, 2).contiguous()
         x = x.view(N, V*C, T)
         data_bn = nn.BatchNorm1d(V*C, affine=False)
