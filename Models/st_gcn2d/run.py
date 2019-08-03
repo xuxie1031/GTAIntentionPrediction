@@ -5,17 +5,17 @@ import torch.optim as optim
 import argparse
 import time
 from .st_gcn2d import STGCN2DModel
-from utils import *
+from .graph import Graph
+from .utils import *
 
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), '..', '..'))
 from DataSet import *
-from graph import *
 
 
 def exec_model(dataloader_train, dataloader_test, args):
-    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dec_hidden_size, args.out_dim, args.use_cuda, args.dropout)
+    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dec_hidden_size, args.out_dim, args.use_cuda, dropout=args.dropout)
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     err_epochs = []
@@ -29,7 +29,7 @@ def exec_model(dataloader_train, dataloader_test, args):
             input_data_list, pred_data_list, _, num_nodes_list = batch
 
             loss_batch = 0.0
-            num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_list)
+            num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_nodes_list)
             for num in num2input_dict.keys():
                 batch_size = len(num2input_dict[num])
                 batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
@@ -83,7 +83,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 input_data_list, pred_data_list, _, num_nodes_list = batch
 
                 err_batch = 0.0
-                num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_list)
+                num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_nodes_list)
                 for num in num2input_dict.keys():
                     batch_size = len(num2input_dict[num])
                     batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
@@ -129,3 +129,6 @@ def main():
     parser.add_argument('--in_channels', type=int, default=4)
     parser.add_argument('--dec_hidden_size', type=int, default=256)
     parser.add_argument('--out_dim', type=int, default=5)
+    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--use_cuda', action='store_true', default=True)
+    parser.add_argument('--num_epochs', type=int, default=30)

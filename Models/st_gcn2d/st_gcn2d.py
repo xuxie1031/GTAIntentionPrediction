@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 
-from .graph import *
+from .graph import Graph
+from .utils import *
 
 class GraphConvNet2D(nn.Module):
     def __init__(self, in_channels, out_channels, s_kernel_size=1, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1, bias=True):
