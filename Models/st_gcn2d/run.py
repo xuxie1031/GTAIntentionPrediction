@@ -127,8 +127,25 @@ def main():
     parser.add_argument('--obs_len', type=int, default=10)
     parser.add_argument('--pred_len', type=int, default=12)
     parser.add_argument('--in_channels', type=int, default=4)
+    parser.add_argument('--spatial_kernel_size', type=int, default=2)
+    parser.add_argument('--temporal_kernel_size', type=int, default=3)
     parser.add_argument('--dec_hidden_size', type=int, default=256)
     parser.add_argument('--out_dim', type=int, default=5)
     parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--pretrain_epochs', type=int, default=5)
+    parser.add_argument('--dset_name', type=str, default='GTA')
+    parser.add_argument('--dset_feature', type=int, default=4)
+
+    args = parser.parse_args()
+
+    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, 'train'))
+    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, 'test'))
+
+    exec_model(train_loader, test_loader, args)
+
+
+if __name__ == '__main__':
+    main()
