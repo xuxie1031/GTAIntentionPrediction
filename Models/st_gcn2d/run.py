@@ -124,4 +124,8 @@ def main():
 
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--obs_len', type=int, default=10)
+    parser.add_argument('--pred_len', type=int, default=12)
+    parser.add_argument('--in_channels', type=int, default=4)
+    parser.add_argument('--dec_hidden_size', type=int, default=256)
     parser.add_argument('--out_dim', type=int, default=5)
