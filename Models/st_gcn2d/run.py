@@ -132,6 +132,7 @@ def main():
     parser.add_argument('--dec_hidden_size', type=int, default=256)
     parser.add_argument('--out_dim', type=int, default=5)
     parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--num_epochs', type=int, default=30)

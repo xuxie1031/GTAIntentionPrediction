@@ -25,4 +25,47 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 		num_batch = 0
 		for batch in dataloader_train:
-			pass
+			t_start = time.time()
+			input_data_list, pred_data_list, _, num_node_list = batch
+
+			loss_batch = 0.0
+			num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_node_list)
+			for num in num2input_dict.keys():
+				batch_size = len(num2input_dict[num])
+				batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
+
+				batch_data = torch.cat((batch_input_data, batch_pred_data), dim=1)
+				batch_data, _ = data_vectorize(batch_data)
+				batch_input_data, batch_pred_data = batch_data[:, :-args.pred_len, :, :], batch_data[:, -args.pred_len:, :, :]
+
+				inputs = data_feeder(batch_input_data)
+
+				g = Graph(batch_input_data[:, 0, :, :])
+				As = g.normalize_undigraph()
+
+				if args.use_cuda:
+					inputs = inputs.cuda()
+					As = As.cuda()
+
+				preds = net(inputs, As)
+
+				loss = 0.0
+				for i in range(len(preds)):
+					if epoch < args.pretrain_epochs:
+						loss += mse_loss(preds[i], batch_pred_data[i])
+					else:
+						loss += nll_loss(preds[i], batch_pred_data[i])
+				loss_batch = loss.item() / batch_size
+				loss = loss.mean()
+
+				optimizer.zero_grad()
+				loss.backward()
+
+				torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
+				optimizer.step()
+			
+			t_end = time.time()
+			loss_epoch += loss_batch
+			num_batch += 1
+
+			print('epoch {}')

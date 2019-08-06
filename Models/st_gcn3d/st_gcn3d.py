@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from .graph import *
+from .utils import *
 
 class GraphConvNet3D(nn.Module):
     def __init__(self, in_channels, out_channels, s_kernel_size=1, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1, bias=True):
@@ -10,8 +11,8 @@ class GraphConvNet3D(nn.Module):
         self.s_kernel_size = s_kernel_size
         self.conv = nn.Conv3d(in_channels, out_channels*s_kernel_size,
                                 kernel_size=(t_kernel_size, 1, 1),
-                                padding=padding(t_padding, 0, 0),
-                                stride=stride(t_stride, 1, 1),
+                                padding=(t_padding, 0, 0),
+                                stride=(t_stride, 1, 1),
                                 dilation=(t_dilation, 1, 1),
                                 bias=bias)
 
@@ -89,7 +90,7 @@ class STGCN3DModel(nn.Module):
         self.pred_len = pred_len
         self.out_dim = out_dim
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
-        kwargs0 = {k, v for k, v in kwargs.items() if k != 'dropout'}
+        kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
 
         self.st_gcn3d_modules = nn.ModuleList((
             ST_GCN3D(in_channels, 64, kernel_size, stride=1, residual=False, **kwargs0),
