@@ -5,21 +5,16 @@ class Graph:
     def __init__(self, batch_templates):
         N, V, C = batch_templates.size()
 
-        self.s_kernel = 2
-        self.A = torch.zeros(N, self.s_kernel, V, V)
+        self.A = torch.zeros(N, V, V)
         self.A.requires_grad = False
 
         self.edges(batch_templates)
 
 
     def edges(self, batch_templates):
-        N = self.A.size()[0]
-        V = self.A.size()[-1]
+        N = self.A.size(0)
+        V = self.A.size(-1)
 
-        # s_kernel == 0
-        self.A[:, 0] = torch.eye(V).repeat(N, 1, 1)
-
-        # s_kernel == 1
         for num in range(N):
             for i in range(V):
                 for j in range(i+1, V):
@@ -28,25 +23,53 @@ class Graph:
                     a, b, c, d = (xi-xj), (yi-yj), (vxi-vxj), (vyi-vyj)
                     tmin = -(a*c+b*d)/(c**2+d**2)
                     tmin = np.ceil(tmin.item())
-                    self.A[num, 1, i, j] = 1.0 / tmin if tmin > 0.0 else 0.0
-                    self.A[num, 1, j, i] = self.A[num, 1, i, j]
+                    self.A[num, i, j] = 1.0 / tmin if tmin > 0.0 else 0.0
+                    self.A[num, j, i] = self.A[num, i, j]
+        
+        self.A = self.A + torch.eye(V).repeat(N, 1, 1)
     
 
     def normalize_undigraph(self, alpha=1e-3):
         DADs = torch.zeros(self.A.size())
         DADs.requires_grad = False
-
-        N = self.A.size()[0]
-        V = self.A.size()[-1]
+    
+        N = self.A.size(0)
+        V = self.A.size(-1)
 
         for num in range(N):
-            for k in range(self.s_kernel):
-                A = self.A[num, k]
-                D1 = np.sum(A, 0)+alpha
-                Dn = torch.zeros(V, V)
-                for i in range(V):
-                    Dn[i, i] = D1[i]**(-0.5)
-                DAD = Dn.mm(A).mm(Dn)
-                DADs[num, k] = DAD
-        
+            A = self.A[num]
+            D1 = np.sum(A, 0)+alpha
+            Dn = torch.zeros(V, V)
+            for i in range(V):
+                Dn[i, i] = D1[i]**(-0.5)
+            DAD = Dn.mm(A).mm(Dn)
+            DADs[num] = DAD
+
         return DADs
+
+
+    def graph_pos_weights(self):
+        N = self.A.size(0)
+        V = self.A.size(-1)
+        pos_weights = torch.zeros(N)
+
+        for i in range(N):
+            A_sum = self.A[i].sum()-1.0*V
+            pos_weights[i] = (V**2-A_sum)/A_sum
+        
+        return pos_weights
+
+    
+    def graph_norms(self):
+        N = self.A.size(0)
+        V = self.A.size(-1)
+        norms = torch.zeros(N)
+
+        for i in range(N):
+            A_sum = self.A[i].sum()-1.0*V
+            norms[i] = (V**2)/(2*(V**2-A_sum))
+
+        return norms
+
+    def graph_As(self):
+        return self.A

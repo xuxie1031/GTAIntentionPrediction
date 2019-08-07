@@ -35,7 +35,7 @@ class DroneDataset():
 
         for agent_id in agent_ids:
             data_seg = data[data[:, 0] == agent_id, :]
-            converted_data_seg = np.zeros(data_seg.shape[0], 6)
+            converted_data_seg = np.zeros((data_seg.shape[0], 6))
 
             data_seg_x = (data_seg[:, 1]+data_seg[:, 3]) / 2
             data_seg_y = (data_seg[:, 2]+data_seg[:, 4]) / 2
@@ -66,6 +66,9 @@ class DroneDataset():
         train_path = os.path.join(self.save_path, 'DroneDataset', 'train')
         test_path = os.path.join(self.save_path, 'DroneDataset', 'test')
 
+        if not os.path.exists(train_path): os.makedirs(train_path)
+        if not os.path.exists(test_path): os.makedirs(test_path)
+
         train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
         test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
 
@@ -81,7 +84,9 @@ class DroneDataset():
             converted_data = self.data_convert(file)
             self.data_save(converted_data)
     
-
+'''
+NGSIM US-101 Dataset
+'''
 class NGSIMDataset():
     def __init__(self, dset_path, save_path='dataset'):
         self.dset_path = dset_path
@@ -107,7 +112,7 @@ class NGSIMDataset():
 
         for agent_id in agent_ids:
             data_seg = data[data[:, 0] == agent_id, :]
-            converted_data_seg = np.zeros(data_seg.shape[0], 6)
+            converted_data_seg = np.zeros((data_seg.shape[0], 6))
 
             data_seg_x = data_seg[:, 3]
             data_seg_y = data_seg[:, 2]
@@ -141,6 +146,9 @@ class NGSIMDataset():
         train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
         test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
 
+        if not os.path.exists(train_path): os.makedirs(train_path)
+        if not os.path.exists(test_path): os.makedirs(test_path)
+
         train_name = os.path.join(train_path, 'data'+str(train_count))
         test_name = os.path.join(test_path, 'data'+str(test_count))
 
@@ -153,5 +161,44 @@ class NGSIMDataset():
             converted_data = self.data_convert(file)
             self.data_save(converted_data)
 
+
+'''
+GTA Dataset
+'''
+class GTADataset():
+    def __init__(self, dset_path, save_path='dataset', tag='GTAS', full_tag='straight', number=6):
+        self.dset_path = dset_path
+        self.save_path = save_path
+        self.tag = tag
+        self.full_tag = full_tag
+        self.number = number
+        self.files = []
+
     
+    def data_files(self):
+        for idx in range(self.tag):
+            dir_path = os.path.join(self.dset_path, self.tag, '['+str(idx)+']'+self.full_tag)
+            for name in os.listdir(dir_path):
+                file = os.path.join(dir_path, name)
+                if os.path.isfile(file):
+                    self.files.append(file)
+    
+
+    def data_convert(self, file):
+        raw_data = np.loadtxt(file, delimiter=',', usecols=(0, 1, 2, 3))
+        converted_data = []
+
+        data = raw_data[np.argsort(raw_data[:, 1])]
+        agent_ids = np.unique(data[:, 1])
+
+        for agent_id in agent_ids:
+            data_seg = data[data[:, 1] == agent_id, :]
+            converted_data_seg = np.zeros((data_seg.shape[0], 6))
+
+            data_seg_x = data_seg[:, 2]
+            data_seg_y = data_seg[:, 3]
+            data_seg_vx = data_seg_x[1:]-data_seg_x[:-1]
+            data_seg_vy = data_seg_y[1:]-data_seg_y[:-1]
+            data_seg_vx, data_seg_vy = np.append(data_seg_vx, 0.0), np.append(data_seg_vy, 0.0)
+
 # start preprocess

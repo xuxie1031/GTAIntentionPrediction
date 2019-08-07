@@ -50,6 +50,7 @@ class GCNVAE(nn.Module):
         self.gc2 = GraphConvS(h_dim1, h_dim2)
         self.dc = InnerProductDecoder(dropout=dropout)
 
+
     def encode(self, x, A):
         hidden, _ = self.gc0(x, A)
         hidden = F.dropout(hidden, self.dropout, self.training)
