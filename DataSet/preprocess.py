@@ -243,3 +243,5 @@ class GTADataset():
             self.data_save(converted_data)
 
 # start preprocess
+pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
+pre_dset.pipeline()
