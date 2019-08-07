@@ -143,11 +143,11 @@ class NGSIMDataset():
         train_path = os.path.join(self.save_path, 'NGSIMDataset', 'train')
         test_path = os.path.join(self.save_path, 'NGSIMDataset', 'test')
 
-        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
-        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
-
         if not os.path.exists(train_path): os.makedirs(train_path)
         if not os.path.exists(test_path): os.makedirs(test_path)
+
+        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
+        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
 
         train_name = os.path.join(train_path, 'data'+str(train_count))
         test_name = os.path.join(test_path, 'data'+str(test_count))
@@ -200,5 +200,46 @@ class GTADataset():
             data_seg_vx = data_seg_x[1:]-data_seg_x[:-1]
             data_seg_vy = data_seg_y[1:]-data_seg_y[:-1]
             data_seg_vx, data_seg_vy = np.append(data_seg_vx, 0.0), np.append(data_seg_vy, 0.0)
+
+            converted_data_seg[:, 0] = data_seg[:, 0]
+            converted_data_seg[:, 1] = data_seg[:, 1]
+            converted_data_seg[:, 2] = data_seg_x
+            converted_data_seg[:, 3] = data_seg_y
+            converted_data_seg[:, 4] = data_seg_vx
+            converted_data_seg[:, 5] = data_seg_vy
+
+            converted_data.append(converted_data_seg)
+        converted_data = np.concatenate(converted_data, axis=0)
+
+        converted_data = converted_data[np.argsort(converted_data[:, 0])]
+
+        return converted_data
+
+    
+    def data_save(self, converted_data):
+        bound = int(converted_data.shape[0]*0.7)
+        train_data = converted_data[:bound, :]
+        test_data = converted_data[bound:, :]
+
+        train_path = os.path.join(self.save_path, 'GTADataset', self.tag, 'train')
+        test_path = os.path.join(self.save_path, 'GTADataset', self.tag, 'test')
+
+        if not os.path.exists(train_path): os.makedirs(train_path)
+        if not os.path.exists(test_path): os.makedirs(test_path)
+
+        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
+        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
+
+        train_name = os.path.join(train_path, 'data'+str(train_count))
+        test_name = os.path.join(test_path, 'data'+str(test_count))
+
+        np.savetxt(train_name, train_data, delimiter=',')
+        np.savetxt(test_name, test_data, delimiter=',')
+
+
+    def pipeline(self):
+        for file in self.files:
+            converted_data = self.data_convert(file)
+            self.data_save(converted_data)
 
 # start preprocess

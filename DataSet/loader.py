@@ -6,6 +6,8 @@ def data_loader(args, path):
         path,
         obs_len=args.obs_len,
         pred_len=args.pred_len,
+        frame_skip=args.frame_skip,
+        num_feature=args.dset_feature
     )
 
     loader = DataLoader(
