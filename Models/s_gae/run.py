@@ -84,12 +84,14 @@ def main():
     parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.0)
     parser.add_argument('--use_cuda', action='store_true', default=True)
-    parser.add_argument('--dset_name', type=str, default='GTAL')
+    parser.add_argument('--dset_name', type=str, default='GTADataset')
+    parser.add_argument('--dset_tag', type=str, default='GTAS')
     parser.add_argument('--dset_feature', type=int, default=4)
+    parser.add_argument('--frame_skip', type=int, default=1)
 
     args = parser.parse_args()
 
-    _, d_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'Dataset', 'dataset', args.dset_name, 'all'))
+    _, d_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'Dataset', 'dataset', args.dset_name, args.dset_tag, 'train'))
 
     exec_model(d_loader, args)
 
