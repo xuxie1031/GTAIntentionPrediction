@@ -176,7 +176,7 @@ class GTADataset():
 
     
     def data_files(self):
-        for idx in range(self.tag):
+        for idx in range(self.number):
             dir_path = os.path.join(self.dset_path, self.tag, '['+str(idx)+']'+self.full_tag)
             for name in os.listdir(dir_path):
                 file = os.path.join(dir_path, name)
