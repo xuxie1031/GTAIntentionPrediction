@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 
 class Graph:
@@ -38,7 +39,7 @@ class Graph:
 
         for num in range(N):
             A = self.A[num]
-            D1 = np.sum(A, 0)+alpha
+            D1 = torch.sum(A, dim=0)+alpha
             Dn = torch.zeros(V, V)
             for i in range(V):
                 Dn[i, i] = D1[i]**(-0.5)
@@ -48,25 +49,25 @@ class Graph:
         return DADs
 
 
-    def graph_pos_weights(self):
+    def graph_pos_weights(self, alpha=1e-3):
         N = self.A.size(0)
         V = self.A.size(-1)
         pos_weights = torch.zeros(N)
 
         for i in range(N):
-            A_sum = self.A[i].sum()-1.0*V
+            A_sum = self.A[i].sum()-1.0*V+alpha
             pos_weights[i] = (V**2-A_sum)/A_sum
         
         return pos_weights
 
     
-    def graph_norms(self):
+    def graph_norms(self, alpha=1e-3):
         N = self.A.size(0)
         V = self.A.size(-1)
         norms = torch.zeros(N)
 
         for i in range(N):
-            A_sum = self.A[i].sum()-1.0*V
+            A_sum = self.A[i].sum()-1.0*V+alpha
             norms[i] = (V**2)/(2*(V**2-A_sum))
 
         return norms

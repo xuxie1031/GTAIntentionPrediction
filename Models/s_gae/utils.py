@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
@@ -41,11 +42,13 @@ def data_vectorize(data_seq):
     return torch.stack(vecotorized_seq), first_value_dict
         
 
-def vae_loss(preds, targets, mu, logvar, n_nodes, norms, pos_weights):
+def vae_loss(preds, targets, mu, logvar, n_nodes, norms, pos_weights, device):
     N = preds.size(0)
-    costs = torch.zeros(N)
+    costs = torch.zeros(N).to(device)
+
     for i in range(N):
-        costs[i] = norms[i]*F.binary_cross_entropy(preds[i], targets[i], pos_weights=pos_weights[i])
+        # costs[i] = norms[i]*F.binary_cross_entropy_with_logits(preds[i], targets[i])
+        costs[i] = F.binary_cross_entropy_with_logits(preds[i], targets[i])
     
     KLDs = -0.5 / n_nodes*torch.mean(torch.sum(1+2*logvar-mu.pow(2)-logvar.exp().pow(2), dim=2), dim=1)
 

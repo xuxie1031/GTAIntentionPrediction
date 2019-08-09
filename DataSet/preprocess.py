@@ -69,8 +69,8 @@ class DroneDataset():
         if not os.path.exists(train_path): os.makedirs(train_path)
         if not os.path.exists(test_path): os.makedirs(test_path)
 
-        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
-        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
+        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(os.path.join(train_path, name))])
+        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(os.path.join(test_path, name))])
 
         train_name = os.path.join(train_path, 'data'+str(train_count))
         test_name = os.path.join(test_path, 'data'+str(test_count))
@@ -80,6 +80,7 @@ class DroneDataset():
 
 
     def pipeline(self):
+        self.data_files()
         for file in self.files:
             converted_data = self.data_convert(file)
             self.data_save(converted_data)
@@ -146,8 +147,8 @@ class NGSIMDataset():
         if not os.path.exists(train_path): os.makedirs(train_path)
         if not os.path.exists(test_path): os.makedirs(test_path)
 
-        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
-        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
+        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(os.path.join(train_path, name))])
+        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(os.path.join(test_path, name))])
 
         train_name = os.path.join(train_path, 'data'+str(train_count))
         test_name = os.path.join(test_path, 'data'+str(test_count))
@@ -157,6 +158,7 @@ class NGSIMDataset():
 
     
     def pipeline(self):
+        self.data_files()
         for file in self.files:
             converted_data = self.data_convert(file)
             self.data_save(converted_data)
@@ -227,8 +229,8 @@ class GTADataset():
         if not os.path.exists(train_path): os.makedirs(train_path)
         if not os.path.exists(test_path): os.makedirs(test_path)
 
-        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(name)])
-        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(name)])
+        train_count = len([name for name in os.listdir(train_path) if os.path.isfile(os.path.join(train_path, name))])
+        test_count = len([name for name in os.listdir(test_path) if os.path.isfile(os.path.join(test_path, name))])
 
         train_name = os.path.join(train_path, 'data'+str(train_count))
         test_name = os.path.join(test_path, 'data'+str(test_count))
@@ -238,10 +240,11 @@ class GTADataset():
 
 
     def pipeline(self):
+        self.data_files()
         for file in self.files:
             converted_data = self.data_convert(file)
             self.data_save(converted_data)
 
 # start preprocess
-pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
-pre_dset.pipeline()
+# pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
+# pre_dset.pipeline()

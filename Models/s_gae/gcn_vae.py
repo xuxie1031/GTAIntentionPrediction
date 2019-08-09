@@ -33,7 +33,7 @@ class InnerProductDecoder(nn.Module):
     # z: (N, V, C)
     def forward(self, z):
         z = F.dropout(z, self.dropout, training=self.training)
-
+        
         z_t = z.permute(0, 2, 1).contiguous()
         A = torch.sigmoid(torch.einsum('nuc,ncv->nuv', (z, z_t)))
 
@@ -41,7 +41,7 @@ class InnerProductDecoder(nn.Module):
 
 
 class GCNVAE(nn.Module):
-    def __init__(self, in_channels, h_dim1, h_dim2, dropout=0.0):
+    def __init__(self, in_channels, h_dim1, h_dim2, dropout=0.0, use_cuda=True, device=None):
         super(GCNVAE, self).__init__()
 
         self.dropout = dropout
@@ -49,10 +49,15 @@ class GCNVAE(nn.Module):
         self.gc1 = GraphConvS(h_dim1, h_dim2)
         self.gc2 = GraphConvS(h_dim1, h_dim2)
         self.dc = InnerProductDecoder(dropout=dropout)
+        self.bn = nn.BatchNorm2d(h_dim1)
+        
+        if use_cuda:
+            self.to(device)
 
 
     def encode(self, x, A):
         hidden, _ = self.gc0(x, A)
+        hidden = self.bn(hidden)
         hidden = F.dropout(hidden, self.dropout, self.training)
         hidden = F.relu(hidden)
 
@@ -60,14 +65,11 @@ class GCNVAE(nn.Module):
         logvar, _ = self.gc2(hidden, A)
 
         N, C, U, V = mu.size()
-        pool = nn.AvgPool1d(V)
         
-        mu = pool(mu)
-        mu = mu.view(-1, C, U)
+        mu = mu.mean(dim=-1)
         mu = mu.permute(0, 2, 1).contiguous()
 
-        logvar = pool(logvar)
-        logvar = logvar.view(-1, C, U)
+        logvar = logvar.mean(dim=-1)
         logvar = logvar.permute(0, 2, 1).contiguous()
 
         return mu, logvar
