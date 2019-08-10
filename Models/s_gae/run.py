@@ -10,8 +10,9 @@ from utils import *
 
 import os
 import sys
-sys.path.append(os.path.join(os.getcwd(), '..', '..'))
-from DataSet import *
+sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
+from trajectories import *
+from loader import *
 
 
 def exec_model(dataloader, args):
@@ -20,6 +21,8 @@ def exec_model(dataloader, args):
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     for epoch in range(args.num_epochs):
+        net.train()
+
         print('****** Training beginning ******')
         loss_epoch = 0
 
@@ -59,7 +62,7 @@ def exec_model(dataloader, args):
                 optimizer.zero_grad()
                 loss.backward()
 
-                # torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
+                torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
                 optimizer.step()
             t_end = time.time()
             loss_epoch += loss_batch
@@ -69,6 +72,51 @@ def exec_model(dataloader, args):
         
         loss_epoch /= num_batch
         print('epoch {}, train_loss = {:.6f}'.format(epoch, loss_epoch))
+
+    print('****** dump features ******')
+    net.eval()
+
+    dump_features = []
+    for batch in dataloader:
+        t_start = time.time()
+        input_data_list, pred_data_list, _, num_nodes_list = batch
+
+        for idx in range(dataloader.batch_size):
+            input_data = input_data_list[idx]
+            pred_data = pred_data_list[idx]
+            data = torch.cat((input_data, pred_data), dim=0)
+
+            num_nodes = num_nodes_list[idx]
+            
+            data, _ = data_vectorize(data)
+            inputs = data_feeder(data)
+
+            g = Graph(data)
+            As = g.normalize_undigraph()
+            pos_weights = g.graph_pos_weights()
+            norms = g.graph_norms()
+            
+            if args.use_cuda:
+                inputs = inputs.to(dev)
+                As = As.to(dev)
+                pos_weights = pos_weights.to(dev)
+            
+            _, mu, _ = net(inputs, As)
+            mu = mu.permute(0, 2, 1).contiguous()
+            mu = mu.data.cpu().numpy()
+            dump_features.append(mu)
+    
+        t_end = time.time()
+        num_batch += 1
+
+        print('save batch {}, time/batch = {:.3f}'.format(num_batch, t_end-t_start))
+
+    print(len(dump_features))
+    if os.path.exists('saved_features'): os.makedirs('saved_features')
+    state = {}
+    state['features'] = dump_features
+
+    torch.save(state, os.path.join('saved_features', args.save_name))
 
 
 def main():
@@ -81,15 +129,16 @@ def main():
     parser.add_argument('--in_channels', type=int, default=4)
     parser.add_argument('--h_dim1', type=int, default=128)
     parser.add_argument('--h_dim2', type=int, default=64)
-    parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--grad_clip', type=float, default=10.0)
-    parser.add_argument('--dropout', type=float, default=0.0)
+    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--grad_clip', type=float, default=1.0)
+    parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--dset_name', type=str, default='GTADataset')
     parser.add_argument('--dset_tag', type=str, default='GTAS')
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=1)
-    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--num_epochs', type=int, default=1)
+    parser.add_argument('--save_name', type=str, default='feature_GTAS')
 
     args = parser.parse_args()
 
