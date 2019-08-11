@@ -20,6 +20,7 @@ def exec_model(dataloader, args):
     net = GCNVAE(args.in_channels, args.h_dim1, args.h_dim2, dropout=args.dropout, use_cuda=args.use_cuda, device=dev)
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
+    losses = []
     for epoch in range(args.num_epochs):
         net.train()
 
@@ -71,12 +72,17 @@ def exec_model(dataloader, args):
             print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
         
         loss_epoch /= num_batch
+        losses.append(loss_epoch)
         print('epoch {}, train_loss = {:.6f}'.format(epoch, loss_epoch))
+        print(losses)
 
     print('****** dump features ******')
     net.eval()
 
     dump_features = []
+    dim = 0
+
+    num_batch = 0
     for batch in dataloader:
         t_start = time.time()
         input_data_list, pred_data_list, _, num_nodes_list = batch
@@ -103,7 +109,9 @@ def exec_model(dataloader, args):
             
             _, mu, _ = net(inputs, As)
             mu = mu.permute(0, 2, 1).contiguous()
+            mu = mu.mean(-1)
             mu = mu.data.cpu().numpy()
+            dim = mu.shape[-1]
             dump_features.append(mu)
     
         t_end = time.time()
@@ -112,9 +120,10 @@ def exec_model(dataloader, args):
         print('save batch {}, time/batch = {:.3f}'.format(num_batch, t_end-t_start))
 
     print(len(dump_features))
-    if os.path.exists('saved_features'): os.makedirs('saved_features')
+    if not os.path.exists('saved_features'): os.makedirs('saved_features')
     state = {}
     state['features'] = dump_features
+    state['dim'] = dim
 
     torch.save(state, os.path.join('saved_features', args.save_name))
 
@@ -130,20 +139,20 @@ def main():
     parser.add_argument('--h_dim1', type=int, default=128)
     parser.add_argument('--h_dim2', type=int, default=64)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--grad_clip', type=float, default=1.0)
+    parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--dset_name', type=str, default='GTADataset')
     parser.add_argument('--dset_tag', type=str, default='GTAS')
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=1)
-    parser.add_argument('--num_epochs', type=int, default=1)
+    parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--save_name', type=str, default='feature_GTAS')
 
     args = parser.parse_args()
 
-    _, d_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
-    print(len(d_loader))
+    d_set, d_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
+    print(len(d_set))
 
     exec_model(d_loader, args)
 

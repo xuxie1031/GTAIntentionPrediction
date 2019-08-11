@@ -46,8 +46,9 @@ class GCNVAE(nn.Module):
 
         self.dropout = dropout
         self.gc0 = GraphConvS(in_channels, h_dim1)
-        self.gc1 = GraphConvS(h_dim1, h_dim2)
+        self.gc1 = GraphConvS(h_dim1, h_dim1)
         self.gc2 = GraphConvS(h_dim1, h_dim2)
+        self.gc3 = GraphConvS(h_dim1, h_dim2)
         self.dc = InnerProductDecoder(dropout=dropout)
         self.bn = nn.BatchNorm2d(h_dim1)
         
@@ -61,8 +62,13 @@ class GCNVAE(nn.Module):
         hidden = F.dropout(hidden, self.dropout, self.training)
         hidden = F.relu(hidden)
 
-        mu, _ = self.gc1(hidden, A)
-        logvar, _ = self.gc2(hidden, A)
+        hidden, _ = self.gc1(hidden, A)
+        hidden = self.bn(hidden)
+        hidden = F.dropout(hidden, self.dropout, self.training)
+        hidden = F.relu(hidden)
+
+        mu, _ = self.gc2(hidden, A)
+        logvar, _ = self.gc3(hidden, A)
 
         N, C, U, V = mu.size()
         

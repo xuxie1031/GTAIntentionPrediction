@@ -88,8 +88,8 @@ class TrajectoryDataset(Dataset):
                     num_nodes += 1
 
                 # collect sequence in sparse fashion
-                #num_nodes = 0
-                #for agent_id in agents_in_curr_seq:
+                # num_nodes = 0
+                # for agent_id in agents_in_curr_seq:
                 #    curr_agent_seq = curr_seq_data[agent_id == curr_seq_data[:, 1], :]
                 #    curr_agent_seq = np.around(curr_agent_seq, decimals=4)
                 #    if len(curr_agent_seq) != self.seq_len:

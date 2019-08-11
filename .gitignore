@@ -5,6 +5,7 @@
 
 venv
 dataset
+saved_features
 
 record*
 *.pth.tar
