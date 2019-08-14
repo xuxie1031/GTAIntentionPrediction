@@ -61,12 +61,17 @@ class PredictionLayer(nn.Module):
 
 
 class STGCN3DGEPModel(nn.Module):
-	def __init__(self, args, activation='relu', batch_norm=True, dropout=0.0, **kwargs):
+	def __init__(self, args, activation='relu', batch_norm=True):
+		self.pred_len = args.pred_len
+		self.out_dim = args.out_dim
+		self.n_c = args.n_c
+
 		self.stgcn = STGCN3DModule(
 			args.in_channels,
 			args.spatial_kernel_size,
 			args.temporal_kernel_size,
-			**kwargs
+			dropout=args.dropout,
+			residual=args.residual
 		)
 
 		self.cell = nn.LSTMCell(args.input_dim, args.cell_h_dim)
@@ -90,4 +95,26 @@ class STGCN3DGEPModel(nn.Module):
 			self.to(args.device)
 
 	
-	def forward(self, x):
+	def forward(self, x, A):
+		N, _, _, _, V = x.size()
+		pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim)
+		c_outs = torch.zeros(self.pred_len, N, self.n_c)
+
+		x = self.stgcn(x, A)
+
+		N, V, C = x.size()
+		x = x.view(-1, C)
+		x = x.repeat(self.pred_len, 1, 1)
+
+		for i in range(self.pred_len):
+			h = self.cell(x[i])
+			_, H = h.size()
+			h = h.view(N, V, H)
+
+			o_c = self.classifier(h)
+			c_outs[i] = o_c
+
+			o_p = self.predictor(h)
+			pred_outs[i] = o_p
+		
+		return pred_outs, c_outs

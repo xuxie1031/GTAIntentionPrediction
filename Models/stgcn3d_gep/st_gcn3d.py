@@ -84,27 +84,26 @@ class ST_GCN3D(nn.Module):
 
 
 class STGCN3DModule(nn.Module):
-    def __init__(self, in_channels, spatial_kernel_size, temporal_kernel_size, **kwargs):
+    def __init__(self, in_channels, spatial_kernel_size, temporal_kernel_size, dropout=0, residual=True):
         super(STGCN3DModule, self).__init__()
 
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
-        kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
 
         self.st_gcn3d_modules = nn.ModuleList((
-            ST_GCN3D(in_channels, 64, kernel_size, stride=1, residual=False, **kwargs0),
-            ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(64, 128, kernel_size, stride=2, **kwargs),
-            ST_GCN3D(128, 128, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(128, 128, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(128, 256, kernel_size, stride=2, **kwargs),
-            ST_GCN3D(256, 256, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(256, 256, kernel_size, stride=1, **kwargs)
+            ST_GCN3D(in_channels, 64, kernel_size, stride=1, dropout=0, residual=False),
+            ST_GCN3D(64, 64, kernel_size, stride=1, dropout=dropout, residual=residual),
+            ST_GCN3D(64, 64, kernel_size, stride=1, dropout=dropout, residual=residual),
+            ST_GCN3D(64, 64, kernel_size, stride=1, dropout=dropout, residual=residual),
+            ST_GCN3D(64, 128, kernel_size, stride=2, dropout=dropout, residual=residual),
+            ST_GCN3D(128, 128, kernel_size, stride=1, dropout=dropout, residual=residual),
+            ST_GCN3D(128, 128, kernel_size, stride=1, dropout=dropout, residual=residual),
+            ST_GCN3D(128, 256, kernel_size, stride=2, dropout=dropout, residual=residual),
+            ST_GCN3D(256, 256, kernel_size, stride=1, dropout=dropout, residual=residual),
+            ST_GCN3D(256, 256, kernel_size, stride=1, dropout=dropout, residual=residual)
         ))
 
     
-    def forward(self, x, A, o_pred):
+    def forward(self, x, A):
         N, C, T, U, V = x.size()
         x = x.permute(0, 3, 4, 1, 2).contiguous()
         x = x.view(N, U*V*C, T)
