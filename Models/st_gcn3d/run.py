@@ -56,7 +56,6 @@ def exec_model(dataloader_train, dataloader_test, args):
 					else:
 						loss += nll_loss(preds[i], batch_pred_data[i])
 				loss_batch = loss.item() / batch_size
-				loss = loss.mean()
 
 				optimizer.zero_grad()
 				loss.backward()

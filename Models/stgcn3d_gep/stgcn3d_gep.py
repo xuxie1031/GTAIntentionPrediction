@@ -84,7 +84,7 @@ class STGCN3DGEPModel(nn.Module):
 			h_dim=args.cell_h_dim, 
 			e_h_dim=args.e_h_dim,
 			e_c_dim=args.e_c_dim,
-			n_c=args.n_c,
+			nc=args.nc,
 			out_dim=args.out_dim,
 			activation=activation,
 			batch_norm=batch_norm,
@@ -94,11 +94,15 @@ class STGCN3DGEPModel(nn.Module):
 		if args.use_cuda:
 			self.to(args.device)
 
-	
-	def forward(self, x, A):
+	# one_hots_c_seq forms differently in train / test
+	# x: (N, C, T, V, V); A: (N, V, V); one_hots_c_pred_seq: (L, N, NC)
+	# gep_grammar: _; gep_parsed_sentence: (N, _)
+	def forward(self, x, A, one_hots_c_pred_seq, gep_grammar, gep_parsed_sentence):
+		assert one_hots_c_seq.size(0) == self.pred_len
+
 		N, _, _, _, V = x.size()
 		pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim)
-		c_outs = torch.zeros(self.pred_len, N, self.n_c)
+		c_outs = torch.zeros(self.pred_len, N, self.nc)
 
 		x = self.stgcn(x, A)
 
@@ -114,7 +118,17 @@ class STGCN3DGEPModel(nn.Module):
 			o_c = self.classifier(h)
 			c_outs[i] = o_c
 
-			o_p = self.predictor(h)
+			if self.training:
+				one_hots_c = one_hots_c_pred_seq[i]
+			else:
+				one_hots_c = gep_label_merge(o_c, gep_grammar, gep_parsed_sentence)
+				gep_parsed_sentence = gep_update_sentence(o_c, gep_grammar, gep_parsed_sentence)
+
+			o_p = self.predictor(h, one_hots_c)
 			pred_outs[i] = o_p
 		
+		pred_outs = pred_outs.permute(1, 0, 2, 3).contiguous()
+		for i in range(len(pred_outs)):
+			pred_outs[i] = output_activation(pred_outs[i])
+
 		return pred_outs, c_outs
