@@ -24,6 +24,8 @@ def exec_model(args):
     for l_traj in labels:
         print(l_traj)
 
+    np.savetxt(args.save_name, labels, delimiter=',')
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -31,6 +33,7 @@ def main():
     parser.add_argument('--k', type=int, default=5)
     parser.add_argument('--path_name', type=str, default='saved_features')
     parser.add_argument('--file_name', type=str, default='feature_GTAS')
+    parser.add_argument('--save_name', type=str, default='sentences_GTAS')
 
     args = parser.parse_args()
     args.path_name = os.path.join('..', 's_gae', args.path_name)
