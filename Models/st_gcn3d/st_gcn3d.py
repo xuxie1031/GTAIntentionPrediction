@@ -18,12 +18,12 @@ class GraphConvNet3D(nn.Module):
 
     
     def forward(self, x, A):
-        assert A.size(0) == self.s_kernel_size
+        assert A.size(1) == self.s_kernel_size
 
         x = self.conv(x)
 
-        n, kc, t, v, v = x.size()
-        x = x.view(n, self.s_kernel_size, kc // self.s_kernel_size, t, v, v)
+        n, kc, t, u, v = x.size()
+        x = x.view(n, self.s_kernel_size, kc // self.s_kernel_size, t, u, v)
 
         # only consider one s kernel:
         # x = x.sum(dim=1, keepdim=True)

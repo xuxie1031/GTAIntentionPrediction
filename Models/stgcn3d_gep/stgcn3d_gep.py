@@ -64,27 +64,28 @@ class STGCN3DGEPModel(nn.Module):
 	def __init__(self, args, activation='relu', batch_norm=True):
 		self.pred_len = args.pred_len
 		self.out_dim = args.out_dim
-		self.n_c = args.n_c
+		self.nc = args.nc
 
 		self.stgcn = STGCN3DModule(
 			args.in_channels,
+			args.cell_input_dim
 			args.spatial_kernel_size,
 			args.temporal_kernel_size,
 			dropout=args.dropout,
 			residual=args.residual
 		)
 
-		self.cell = nn.LSTMCell(args.input_dim, args.cell_h_dim)
+		self.cell = nn.LSTMCell(args.cell_input_dim, args.cell_h_dim)
 		if args.gru:
-			self.cell = nn.GRUCell(args.input_size, args.cell_h_dim)
+			self.cell = nn.GRUCell(args.cell_input_dim, args.cell_h_dim)
 		
-		self.classifier = ClassifierLayer(h_dim=args.cell_h_dim, n_c=args.n_c)
+		self.classifier = ClassifierLayer(h_dim=args.cell_h_dim, n_c=args.nc)
 		
 		self.predictor = PredictionLayer(
 			h_dim=args.cell_h_dim, 
 			e_h_dim=args.e_h_dim,
 			e_c_dim=args.e_c_dim,
-			nc=args.nc,
+			n_c=args.nc,
 			out_dim=args.out_dim,
 			activation=activation,
 			batch_norm=batch_norm,
@@ -96,8 +97,8 @@ class STGCN3DGEPModel(nn.Module):
 
 	# one_hots_c_seq forms differently in train / test
 	# x: (N, C, T, V, V); A: (N, V, V); one_hots_c_pred_seq: (L, N, NC)
-	# gep_grammar: _; gep_parsed_sentence: (N, _)
-	def forward(self, x, A, one_hots_c_pred_seq, gep_grammar, gep_parsed_sentence):
+	# grammar_gep: _; gep_parsed_sentence: (N, _)
+	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep, gep_parsed_sentence):
 		assert one_hots_c_seq.size(0) == self.pred_len
 
 		N, _, _, _, V = x.size()
@@ -121,11 +122,10 @@ class STGCN3DGEPModel(nn.Module):
 			if self.training:
 				one_hots_c = one_hots_c_pred_seq[i]
 			else:
-				one_hots_c = gep_label_merge(o_c, gep_grammar, gep_parsed_sentence)
-				gep_parsed_sentence = gep_update_sentence(o_c, gep_grammar, gep_parsed_sentence)
+				one_hots_c, gep_parsed_sentence = gep_update_sentence(o_c, grammar_gep, gep_parsed_sentence)
 
 			o_p = self.predictor(h, one_hots_c)
-			pred_outs[i] = o_p
+			pred_outs[i] = o_p 
 		
 		pred_outs = pred_outs.permute(1, 0, 2, 3).contiguous()
 		for i in range(len(pred_outs)):

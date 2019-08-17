@@ -18,12 +18,12 @@ class GraphConvNet3D(nn.Module):
 
     
     def forward(self, x, A):
-        assert A.size(0) == self.s_kernel_size
+        assert A.size(1) == self.s_kernel_size
 
         x = self.conv(x)
 
-        n, kc, t, v, v = x.size()
-        x = x.view(n, self.s_kernel_size, kc // self.s_kernel_size, t, v, v)
+        n, kc, t, u, v = x.size()
+        x = x.view(n, self.s_kernel_size, kc // self.s_kernel_size, t, u, v)
 
         # only consider one s kernel:
         # x = x.sum(dim=1, keepdim=True)
@@ -84,7 +84,7 @@ class ST_GCN3D(nn.Module):
 
 
 class STGCN3DModule(nn.Module):
-    def __init__(self, in_channels, spatial_kernel_size, temporal_kernel_size, dropout=0, residual=True):
+    def __init__(self, in_channels, cell_input_dim, spatial_kernel_size, temporal_kernel_size, dropout=0, residual=True):
         super(STGCN3DModule, self).__init__()
 
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
@@ -97,9 +97,9 @@ class STGCN3DModule(nn.Module):
             ST_GCN3D(64, 128, kernel_size, stride=2, dropout=dropout, residual=residual),
             ST_GCN3D(128, 128, kernel_size, stride=1, dropout=dropout, residual=residual),
             ST_GCN3D(128, 128, kernel_size, stride=1, dropout=dropout, residual=residual),
-            ST_GCN3D(128, 256, kernel_size, stride=2, dropout=dropout, residual=residual),
-            ST_GCN3D(256, 256, kernel_size, stride=1, dropout=dropout, residual=residual),
-            ST_GCN3D(256, 256, kernel_size, stride=1, dropout=dropout, residual=residual)
+            ST_GCN3D(128, cell_input_dim, kernel_size, stride=2, dropout=dropout, residual=residual),
+            ST_GCN3D(cell_input_dim, cell_input_dim, kernel_size, stride=1, dropout=dropout, residual=residual),
+            ST_GCN3D(cell_input_dim, cell_input_dim, kernel_size, stride=1, dropout=dropout, residual=residual)
         ))
 
     

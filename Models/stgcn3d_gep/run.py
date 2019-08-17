@@ -10,7 +10,9 @@ from utils import *
 
 import os
 import sys
-sys.path.append(os.path.join(os.getcwd(), '..', '..'))
+sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
+from trajectories import *
+from loader import *
 
 
 def exec_model(dataloader_train, dataloader_test, args):
@@ -19,7 +21,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
     stgcn_gep = STGCN3DGEPModel(args)
 
-    state = torch.load(args.saved_model)
+    state = torch.load(args.saved_name)
     s_gae = state['gae']
     cluster_obj = state['cluster']
     grammar_gep = state['grammar']
@@ -27,8 +29,8 @@ def exec_model(dataloader_train, dataloader_test, args):
     phi_params = list(net.stgcn.paramerters())+list(net.cell.paramerters())
     predictor_params = list(net.predictor.paramerters())
     classifier_params = list(net.classifier.paramerters())
-    optim_predictor = optim.Adam(phi_params+predictor_params, lr=1e-4)
-    optim_classifier = optim.Adam(phi_params+classifier_params, lr=1e-4)
+    optim_predictor = optim.Adam(phi_params+predictor_params, lr=args.lr)
+    optim_classifier = optim.Adam(phi_params+classifier_params, lr=args.lr)
 
     err_epochs = []
     for epoch in range(args.num_epochs):
@@ -57,7 +59,15 @@ def exec_model(dataloader_train, dataloader_test, args):
                 g = Graph(batch_input_data[:, 0, :, :])
                 As = g.normalize_undigraph()
 
-                gep_parsed_label_seq = gep_obs_parse(batch_data, args.obs_len+args.pred_len, s_gae, cluster_obj, grammar_gep)
+                As_seq = []
+                for i in range(args.obs_len+args.pred_len-1):
+                    g = Graph(batch_data[:, i, :, :])
+                    As = g.normalize_undigraph()
+                    As_seq.append(As)
+                As_seq = torch.stack(As_seq)
+                As = As_seq[0]
+
+                gep_parsed_label_seq = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, device=dev)
                 one_hots_c_pred_seq = convert_one_hots(gep_parsed_label_seq[:, -args.pred_len:], args.nc)
 
                 if args.use_cuda:
@@ -71,7 +81,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 gd_label_seq = gep_parsed_label_seq[:, -args.pred_len:]
                 for i in range(len(c_outs)):
                     loss_c += cross_entropy_loss(c_outs[i], gd_label_seq[:, i])
-                loss_batch_c = loss_c.item()
+                loss_batch_c += loss_c.item()
 
                 optim_classifier.zero_grad()
                 loss_c.backward()
@@ -85,7 +95,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                         loss_p += mse_loss(pred_outs[i], batch_pred_data[i])
                     else:
                         loss_p += nll_loss(pred_outs[i], batch_pred_data[i])
-                loss_batch_p = loss_p.item() / batch_size
+                loss_batch_p += loss_p.item() / batch_size
                 loss_p /= batch_size
 
                 optim_predictor.zero_grad()
@@ -123,10 +133,15 @@ def exec_model(dataloader_train, dataloader_test, args):
                 batch_input_data, first_value_dicts = data_vectorize(batch_input_data)
                 inputs = data_feeder(batch_input_data)
 
-                g = Graph(batch_input_data)
-                As = g.normalize_undigraph()
+                As_seq = []
+                for i in range(args.obs_len-1):
+                    g = Graph(batch_input_data[:, i, :, :])
+                    As = g.normalize_undigraph()
+                    As_seq.append(As)
+                As_seq = torch.stack(As_seq)
+                As = As_seq[0]
 
-                gep_parsed_label_seq = gep_obs_parse(batch_input_data, args.obs_len, s_gae, cluster_obj, grammar_gep)
+                gep_parsed_label_seq = gep_obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, grammar_gep, device=dev)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
@@ -140,6 +155,58 @@ def exec_model(dataloader_train, dataloader_test, args):
                 error = 0.0
                 for i in range(len(pred_rets)):
                     error += displacement_error(pred_rets[i], batch_pred_data[i])
-                error /= batch_size
+                err_batch += error.item() / batch_size
             
             t_end = time.time()
+            err_epoch += err_batch
+            num_batch += 1
+
+            print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+
+        err_epoch /= num_batch
+        err_epochs.append(err_epoch)
+        print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
+        print(err_epochs)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--num_worker', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--obs_len', type=int, default=9)
+    parser.add_argument('--pred_len', type=int, default=20)
+    parser.add_argument('--in_channels', type=int, default=4)
+    parser.add_argument('--out_dim', type=int, default=5)
+    parser.add_argument('--nc', type=int, default=5)
+    parser.add_argument('--spatial_kernel_size', type=int, default=2)
+    parser.add_argument('--temporal_kernel_size', type=int, default=3)
+    parser.add_argument('--cell_input_dim', type=int, default=256)
+    parser.add_argument('--cell_h_dim', type=int, default=256)
+    parser.add_argument('--e_h_dim', type=int, default=256)
+    parser.add_argument('--e_c_dim', type=int, default=256)
+    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--grad_clip', type=float, default=10.0)
+    parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--residual', action='store_true', default=True)
+    parser.add_argument('--gru', action='store_true', default=False)
+    parser.add_argument('--use_cuda', action='store_true', default=True)
+    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--dset_name', type=str, default='GTADataset')
+    parser.add_argument('--dset_tag', type=str, default='GTAS')
+    parser.add_argument('--dset_feature', type=int, default=4)
+    parser.add_argument('--frame_skip', type=int, default=1)
+    parser.add_argument('--num_epochs', type=int, default=3)
+    parser.add_argument('--pretrain_epochs', type=int, default=5)
+    parser.add_argument('--saved_name', type=str, default='GAEC5_GEP.pth.tar')
+
+    args = parser.parse_args()
+
+    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
+    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+
+    exec_model(train_loader, test_loader, args)
+
+
+if __name__ == '__main__':
+    main()
