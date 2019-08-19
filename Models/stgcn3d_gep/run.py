@@ -67,7 +67,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As_seq = torch.stack(As_seq)
                 As = As_seq[0]
 
-                gep_parsed_label_seq = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, device=dev)
+                gep_parsed_label_seq = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
                 one_hots_c_pred_seq = convert_one_hots(gep_parsed_label_seq[:, -args.pred_len:], args.nc)
 
                 if args.use_cuda:
