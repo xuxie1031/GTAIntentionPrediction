@@ -67,8 +67,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As_seq = torch.stack(As_seq)
                 As = As_seq[0]
 
-                gep_parsed_label_seq = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
-                one_hots_c_pred_seq = convert_one_hots(gep_parsed_label_seq[:, -args.pred_len:], args.nc)
+                obs_sentence_prob = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
+                obs_sentence = convert_sentence(obs_sentence_prob, grammar_gep)
+                one_hots_c_pred_seq = convert_one_hots(obs_sentence[-args.pred_len:, :], args.nc)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
@@ -78,9 +79,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 pred_outs, c_outs = stgcn_gep(inputs, As, one_hots_c_pred_seq, None, None)
 
                 loss_c = 0.0
-                gd_label_seq = gep_parsed_label_seq[:, -args.pred_len:]
+                gd_label_seq = obs_sentence[-args.pred_len:, :]
                 for i in range(len(c_outs)):
-                    loss_c += cross_entropy_loss(c_outs[i], gd_label_seq[:, i])
+                    loss_c += cross_entropy_loss(c_outs[i], gd_label_seq[i, :])
                 loss_batch_c += loss_c.item()
 
                 optim_classifier.zero_grad()
@@ -141,13 +142,14 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As_seq = torch.stack(As_seq)
                 As = As_seq[0]
 
-                gep_parsed_label_seq = gep_obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, grammar_gep, device=dev)
+                obs_sentence_prob = gep_obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, grammar_gep, device=dev)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
                     As = As.to(dev)
                 
-                pred_outs, _ = stgcn_gep(inputs, As, None, grammar_gep, gep_parsed_label_seq)
+                # need to modify inside
+                pred_outs, _ = stgcn_gep(inputs, As, None, grammar_gep, obs_sentence_prob)
 
                 pred_rets = data_revert(pred_outs)
                 pred_rets = pred_rets[:, :, :, :2]

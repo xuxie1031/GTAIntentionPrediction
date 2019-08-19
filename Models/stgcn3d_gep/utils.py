@@ -105,15 +105,31 @@ def cluster_prob(batch_feature, cluster_obj, nc, eps=1e-6):
     return np.stack(batch_prob)
 
 
-def convert_one_hots(label_seq, nc):
-    N, seq_len = label_seq.size()
+def convert_one_hots(sentence, nc):
+    seq_len, N = sentence.size()
     one_hots = torch.zeros(seq_len, N, nc)
 
     for i in range(seq_len):
         for num in range(N):
-            one_hots[i, num, label_seq[num, i]] = 1.0
+            one_hots[i, num, sentence[i, num].item()] = 1.0
     
     return one_hots
+
+
+def convert_sentence(sentence_prob, grammar_gep):
+    seq_len, N, _ = sentence_prob.size()
+    sentence_prob_np = sentence_prob_np.data.numpy()
+
+    # argmax parsing
+    gep_parsed_sentence = torch.zeros(seq_len, N, dtype=torch.long)
+    for num in range(N):
+        gep_parsed_sentence[0, num] = torch.argmax(sentence_prob[0, num])
+    for i in range(1, seq_len):
+        for num in range(N):
+            next_prob = gep_parse(sentence_prob_np[:i, num, :], sentence_prob_np[i, num, :], grammar_gep)
+            gep_parsed_sentence[i, num] = np.argmax(next_prob)
+
+    return gep_parsed_sentence
 
 
 def gep_obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, grammar_gep, nc, device=None):
@@ -133,23 +149,13 @@ def gep_obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, grammar_g
         feature_seq.append(mu.data.cpu().numpy())
     feature_seq = np.stack(feature_seq)
 
-    cluster_sentence_prob = []
+    sentence_prob = []
     for i in range(seq_len):
         batch_prob = cluster_prob(feature_seq[i], cluster_obj, nc)
-        cluster_sentence_prob.append(batch_prob)
-    cluster_sentence_prob = np.stack(cluster_sentence_prob)
-    cluster_sentence_prob = cluster_sentence_prob.transpose(1, 0, 2)
+        sentence_prob.append(batch_prob)
+    sentence_prob = np.stack(sentence_prob)
 
-    # argmax parsing
-    gep_parsed_sentence = np.zeros((cluster_sentence_prob.shape[0], seq_len), dtype=np.int32)
-    for num in range(len(gep_parsed_sentence)):
-        gep_parsed_sentence[num, 0] = np.argmax(cluster_sentence_prob[num, 0])
-    for i in range(1, seq_len):
-        for num in range(len(gep_parsed_sentence)):
-            next_prob = gep_parse(cluster_sentence_prob[num, :i, :], cluster_sentence_prob[num, i, :], grammar_gep)
-            gep_parsed_sentence[num, i] = np.argmax(next_prob)
-
-    return torch.from_numpy(gep_parsed_sentence)
+    return torch.from_numpy(sentence_prob)
 
 
 def gep_update_sentence(o_c, grammar_gep, gep_parsed_sentence):
