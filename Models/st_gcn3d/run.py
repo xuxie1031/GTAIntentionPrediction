@@ -20,6 +20,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 	err_epochs = []
 	for epoch in range(args.num_epochs):
+		net.train()
 		print('****** Training beginning ******')
 		loss_epoch = 0
 
@@ -56,6 +57,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 					else:
 						loss += nll_loss(preds[i], batch_pred_data[i])
 				loss_batch = loss.item() / batch_size
+				loss /= batch_size
 
 				optimizer.zero_grad()
 				loss.backward()
@@ -67,4 +69,15 @@ def exec_model(dataloader_train, dataloader_test, args):
 			loss_epoch += loss_batch
 			num_batch += 1
 
-			print('epoch {}')
+			print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
+
+		loss_epoch /= num_batch
+		print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
+
+		net.eval()
+		print('****** Testing beginning ******')
+		err_epoch = 0.0
+
+		num_batch = 0
+		for batch in dataloader_test:
+			pass
