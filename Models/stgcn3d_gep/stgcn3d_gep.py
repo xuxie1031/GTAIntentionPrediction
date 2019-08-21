@@ -98,7 +98,8 @@ class STGCN3DGEPModel(nn.Module):
 	# one_hots_c_seq forms differently in train / test
 	# x: (N, C, T, V, V); A: (N, V, V); one_hots_c_pred_seq: (L, N, NC)
 	# grammar_gep: _; gep_parsed_sentence: (N, _)
-	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep, gep_parsed_sentence_prob):
+	# will add gae only part
+	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep, gep_parsed_sentence):
 		assert one_hots_c_seq.size(0) == self.pred_len
 
 		N, _, _, _, V = x.size()
@@ -122,7 +123,7 @@ class STGCN3DGEPModel(nn.Module):
 			if self.training:
 				one_hots_c = one_hots_c_pred_seq[i]
 			else:
-				one_hots_c, gep_parsed_sentence_prob = gep_update_sentence(o_c, grammar_gep, gep_parsed_sentence_prob)
+				one_hots_c, gep_parsed_sentence = gep_update_sentence(o_c, grammar_gep, gep_parsed_sentence)
 
 			o_p = self.predictor(h, one_hots_c)
 			pred_outs[i] = o_p 

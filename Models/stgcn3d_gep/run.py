@@ -4,9 +4,9 @@ import torch.optim as optim
 
 import argparse
 import time
-from st_gcn3d_gep import STGCN3DGEPModel
-from graph import Graph
-from utils import *
+from .st_gcn3d_gep import STGCN3DGEPModel
+from .graph import Graph
+from .utils import *
 
 import os
 import sys
@@ -26,9 +26,9 @@ def exec_model(dataloader_train, dataloader_test, args):
     cluster_obj = state['cluster']
     grammar_gep = state['grammar']
 
-    phi_params = list(net.stgcn.paramerters())+list(net.cell.paramerters())
-    predictor_params = list(net.predictor.paramerters())
-    classifier_params = list(net.classifier.paramerters())
+    phi_params = list(stgcn_gep.stgcn.paramerters())+list(stgcn_gep.cell.paramerters())
+    predictor_params = list(stgcn_gep.predictor.paramerters())
+    classifier_params = list(stgcn_gep.classifier.paramerters())
     optim_predictor = optim.Adam(phi_params+predictor_params, lr=args.lr)
     optim_classifier = optim.Adam(phi_params+classifier_params, lr=args.lr)
 
@@ -45,7 +45,7 @@ def exec_model(dataloader_train, dataloader_test, args):
             input_data_list, pred_data_list, _, num_node_list = batch
 
             loss_batch_p, loss_batch_c = 0.0, 0.0
-            num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_list)
+            num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_node_list)
             for num in num2input_dict.keys():
                 batch_size = len(num2input_dict[num])
                 batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
@@ -67,8 +67,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As_seq = torch.stack(As_seq)
                 As = As_seq[0]
 
-                obs_sentence_prob = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
-                obs_sentence = convert_sentence(obs_sentence_prob, grammar_gep)
+                if args.use_grammar:
+                    obs_sentence_prob = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
+                    obs_sentence = convert_sentence(obs_sentence_prob, grammar_gep)
                 one_hots_c_pred_seq = convert_one_hots(obs_sentence[-args.pred_len:, :], args.nc)
 
                 if args.use_cuda:
@@ -142,7 +143,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As_seq = torch.stack(As_seq)
                 As = As_seq[0]
 
-                obs_sentence_prob = gep_obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, grammar_gep, device=dev)
+                if args.use_grammar:
+                    obs_sentence_prob = gep_obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
@@ -151,7 +153,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 # need to modify inside
                 pred_outs, _ = stgcn_gep(inputs, As, None, grammar_gep, obs_sentence_prob)
 
-                pred_rets = data_revert(pred_outs)
+                pred_rets = data_revert(pred_outs, first_value_dicts)
                 pred_rets = pred_rets[:, :, :, :2]
 
                 error = 0.0
@@ -192,6 +194,7 @@ def main():
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--residual', action='store_true', default=True)
     parser.add_argument('--gru', action='store_true', default=False)
+    parser.add_argument('--use_grammar', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--dset_name', type=str, default='GTADataset')

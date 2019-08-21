@@ -118,16 +118,15 @@ def convert_one_hots(sentence, nc):
 
 def convert_sentence(sentence_prob, grammar_gep):
     seq_len, N, _ = sentence_prob.size()
-    sentence_prob_np = sentence_prob_np.data.numpy()
+    sentence_prob_np = sentence_prob.data.numpy()
 
-    # argmax parsing
     gep_parsed_sentence = torch.zeros(seq_len, N, dtype=torch.long)
     for num in range(N):
         gep_parsed_sentence[0, num] = torch.argmax(sentence_prob[0, num])
     for i in range(1, seq_len):
         for num in range(N):
-            next_prob = gep_parse(sentence_prob_np[:i, num, :], sentence_prob_np[i, num, :], grammar_gep)
-            gep_parsed_sentence[i, num] = np.argmax(next_prob)
+            sentence_seq = gep_parse(sentence_prob_np[:i, num, :], sentence_prob_np[i, num, :], grammar_gep)
+            gep_parsed_sentence[i, num] = sentence_seq[-1]
 
     return gep_parsed_sentence
 
