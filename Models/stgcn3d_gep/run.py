@@ -67,9 +67,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As_seq = torch.stack(As_seq)
                 As = As_seq[0]
 
-                if args.use_grammar:
-                    obs_sentence_prob = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
-                    obs_sentence = convert_sentence(obs_sentence_prob, grammar_gep)
+                obs_sentence_prob = gep_obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
+                obs_sentence = convert_sentence(obs_sentence_prob, grammar_gep, use_grammar=args.use_grammar)
                 one_hots_c_pred_seq = convert_one_hots(obs_sentence[-args.pred_len:, :], args.nc)
 
                 if args.use_cuda:
@@ -77,7 +76,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                     As = As.to(dev)
                     one_hots_c_pred_seq = one_hots_c_pred_seq.to(dev)
                 
-                pred_outs, c_outs = stgcn_gep(inputs, As, one_hots_c_pred_seq, None, None)
+                pred_outs, c_outs = stgcn_gep(inputs, As, one_hots_c_pred_seq, None)
 
                 loss_c = 0.0
                 gd_label_seq = obs_sentence[-args.pred_len:, :]
@@ -144,14 +143,14 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As = As_seq[0]
 
                 if args.use_grammar:
-                    obs_sentence_prob = gep_obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, grammar_gep, args.nc, device=dev)
+                    _ = gep_predict_prob(args.obs_len-1, args.nc, grammar_gep)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
                     As = As.to(dev)
                 
                 # need to modify inside
-                pred_outs, _ = stgcn_gep(inputs, As, None, grammar_gep, obs_sentence_prob)
+                pred_outs, _ = stgcn_gep(inputs, As, None, grammar_gep)
 
                 pred_rets = data_revert(pred_outs, first_value_dicts)
                 pred_rets = pred_rets[:, :, :, :2]

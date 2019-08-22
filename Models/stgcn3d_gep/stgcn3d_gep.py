@@ -2,15 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from st_gcn3d import *
-from utils import *
+from .st_gcn3d import *
+from .utils import *
 
 class ClassifierLayer(nn.Module):
-	def __init__(self, h_dim=256, n_c=5):
-		self.fcn = nn.Conv2d(h_dim, n_c, kernel_size=1)
+	def __init__(self, h_dim=256, nc=5):
+		self.nc = nc
+		self.fcn = nn.Conv2d(h_dim, nc, kernel_size=1)
 
 
-    def forward(self, x):
+	def forward(self, x):
 		assert len(x.size()) == 3
 		N, V, H = x.size()
 
@@ -20,13 +21,13 @@ class ClassifierLayer(nn.Module):
 		x = F.avg_pool2d(x, x.size()[2:])
 
 		x = self.fcn(x)
-		x = x.view(-1, n_c)
+		x = x.view(-1, self.nc)
 
 		return x
 
 
 class PredictionLayer(nn.Module):
-	def __init__(self, h_dim=256, e_h_dim=256, e_c_dim=256, n_c=5, out_dim=5, activation='relu', batch_norm=True, dropout=0.0):
+	def __init__(self, h_dim=256, e_h_dim=256, e_c_dim=256, nc=5, out_dim=5, activation='relu', batch_norm=True, dropout=0.0):
 		self.enc_h = make_mlp(
 			[h_dim, e_h_dim],
 			activation=activation,
@@ -35,7 +36,7 @@ class PredictionLayer(nn.Module):
 		)
 
 		self.enc_c = make_mlp(
-			[n_c, e_c_dim],
+			[nc, e_c_dim],
 			activation=activation,
 			batch_norm=batch_norm,
 			dropout=dropout
@@ -65,10 +66,11 @@ class STGCN3DGEPModel(nn.Module):
 		self.pred_len = args.pred_len
 		self.out_dim = args.out_dim
 		self.nc = args.nc
+		self.use_grammar = args.use_grammar
 
 		self.stgcn = STGCN3DModule(
-			args.in_channels,
-			args.cell_input_dim
+			args.inchannels,
+			args.cell_input_dim,
 			args.spatial_kernel_size,
 			args.temporal_kernel_size,
 			dropout=args.dropout,
@@ -79,17 +81,17 @@ class STGCN3DGEPModel(nn.Module):
 		if args.gru:
 			self.cell = nn.GRUCell(args.cell_input_dim, args.cell_h_dim)
 		
-		self.classifier = ClassifierLayer(h_dim=args.cell_h_dim, n_c=args.nc)
+		self.classifier = ClassifierLayer(h_dim=args.cell_h_dim, nc=args.nc)
 		
 		self.predictor = PredictionLayer(
 			h_dim=args.cell_h_dim, 
 			e_h_dim=args.e_h_dim,
 			e_c_dim=args.e_c_dim,
-			n_c=args.nc,
+			nc=args.nc,
 			out_dim=args.out_dim,
 			activation=activation,
 			batch_norm=batch_norm,
-			dropout=dropout
+			dropout=args.dropout
 		)
 
 		if args.use_cuda:
@@ -99,8 +101,8 @@ class STGCN3DGEPModel(nn.Module):
 	# x: (N, C, T, V, V); A: (N, V, V); one_hots_c_pred_seq: (L, N, NC)
 	# grammar_gep: _; gep_parsed_sentence: (N, _)
 	# will add gae only part
-	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep, gep_parsed_sentence):
-		assert one_hots_c_seq.size(0) == self.pred_len
+	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep):
+		assert one_hots_c_pred_seq.size(0) == self.pred_len
 
 		N, _, _, _, V = x.size()
 		pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim)
@@ -123,7 +125,10 @@ class STGCN3DGEPModel(nn.Module):
 			if self.training:
 				one_hots_c = one_hots_c_pred_seq[i]
 			else:
-				one_hots_c, gep_parsed_sentence = gep_update_sentence(o_c, grammar_gep, gep_parsed_sentence)
+				if self.use_grammar:
+					one_hots_c = gep_update(o_c, grammar_gep)
+				else:
+					one_hots_c = general_update(o_c)
 
 			o_p = self.predictor(h, one_hots_c)
 			pred_outs[i] = o_p 
