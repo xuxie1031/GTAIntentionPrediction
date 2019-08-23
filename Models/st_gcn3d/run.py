@@ -80,4 +80,14 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 		num_batch = 0
 		for batch in dataloader_test:
-			pass
+			t_start = time.time()
+			input_data_list, pred_data_list, _, num_node_list = batch
+
+			err_batch = 0.0
+			num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_node_list)
+			for num in num2input_dict.keys():
+				batch_size = len(num2input_dict[num])
+				batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
+
+				batch_input_data, first_value_dicts = data_vectorize(batch_input_data)
+				
