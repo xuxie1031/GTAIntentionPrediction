@@ -90,4 +90,41 @@ def exec_model(dataloader_train, dataloader_test, args):
 				batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
 
 				batch_input_data, first_value_dicts = data_vectorize(batch_input_data)
-				
+				inputs = data_feeder(batch_input_data)
+
+				g = Graph(batch_input_data[:, 0, :, :])
+				As = g.normalize_undigraph()
+
+				if args.use_cuda:
+					inputs = inputs.cuda()
+					As = As.cuda()
+
+				pred_outs = net(inputs, As)
+
+				pred_rets = data_revert(pred_outs, first_value_dicts)
+				pred_rets = pred_rets[:, :, :, :2]
+
+				error = 0.0
+				for i in range(len(pred_rets)):
+					error += displacement_error(pred_rets[i], batch_pred_data[i])
+				err_batch += error.item() / batch_size
+
+			t_end = time.time()
+			err_epoch += err_batch
+			num_batch += 1
+
+			print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.4f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+
+		err_epoch /= num_batch
+		err_epochs.append(err_epoch)
+		print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
+		print(err_epochs)
+
+
+def main():
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument('--num_worker', type=int, default=4)
+	parser.add_argument('--batch_size', type=int, default=64)
+	parser.add_argument('--obs_len', type=int, default=9)
+	parser.add_argument('--pred_len', type=int, default=20)
