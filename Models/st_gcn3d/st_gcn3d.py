@@ -84,11 +84,12 @@ class ST_GCN3D(nn.Module):
 
 
 class STGCN3DModel(nn.Module):
-    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, dec_hidden_size, out_dim, use_cuda=True, **kwargs):
+    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, dec_hidden_size, out_dim, gru=False, use_cuda=True, device=None, **kwargs):
         super(STGCN3DModel, self).__init__()
 
         self.pred_len = pred_len
         self.out_dim = out_dim
+        self.device = device
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
         kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
 
@@ -105,15 +106,20 @@ class STGCN3DModel(nn.Module):
             ST_GCN3D(256, 256, kernel_size, stride=1, **kwargs)
         ))
 
-        self.dec_lstm = nn.LSTM(256, dec_hidden_size)
+        self.dec = nn.LSTM(256, dec_hidden_size)
+        if gru:
+            self.dec = nn.GRU(256, dec_hidden_size)
+
         self.output = nn.Linear(dec_hidden_size, out_dim)
 
         if use_cuda:
-            self.to(torch.device('cuda:0'))
+            self.to(device)
 
     
-    def forward(self, x, A, o_pred):
+    def forward(self, x, A):
         N, C, T, U, V = x.size()
+        o_pred = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
+
         x = x.permute(0, 3, 4, 1, 2).contiguous()
         x = x.view(N, U*V*C, T)
         data_bn = nn.BatchNorm1d(U*V*C, affine=False)
@@ -132,8 +138,8 @@ class STGCN3DModel(nn.Module):
         # prediction
         for i, data in enumerate(x):
             data = data.repeat(self.pred_len, 1, 1)
-            h_dec, _ = self.dec_lstm(data)
+            h_dec, _ = self.dec(data)
             o = self.output(h_dec)
-            o_pred[i, :] = o
+            o_pred[i, :] = output_activation(o)
 
-        return output_activation(o_pred)
+        return o_pred

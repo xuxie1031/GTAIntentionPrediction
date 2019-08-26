@@ -15,7 +15,10 @@ from Dataset import *
 
 
 def exec_model(dataloader_train, dataloader_test, args):
-	net = STGCN3DModel(args.pred_len, args.in_channels, args.spatial_kernel, args.temporal_kernel, args.dec_hidden_size, args.out_dim, args.use_cuda, dropout=args.dropout, residual=args.residual)
+	if args.use_cuda:
+		dev = torch.device('cuda:'+str(args.gpu))
+
+	net = STGCN3DModel(args.pred_len, args.in_channels, args.spatial_kernel, args.temporal_kernel, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout, residual=args.residual)
 	optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
 	err_epochs = []
@@ -45,8 +48,8 @@ def exec_model(dataloader_train, dataloader_test, args):
 				As = g.normalize_undigraph()
 
 				if args.use_cuda:
-					inputs = inputs.cuda()
-					As = As.cuda()
+					inputs = inputs.to(dev)
+					As = As.to(dev)
 
 				preds = net(inputs, As)
 
@@ -138,3 +141,22 @@ def main():
 	parser.add_argument('--dropout', type=float, default=0.5)
 	parser.add_argument('--residual', action='store_ture', default=True)
 	parser.add_argument('--gru', action='store_ture', default=False)
+	parser.add_argument('--use_cuda', action='store_true', default=True)
+	parser.add_argument('--gpu', type=int, default=0)
+	parser.add_argument('--dset_name', type=str, default='GTADataset')
+	parser.add_argument('--dset_tag', type=str, default='GTAS')
+	parser.add_argument('--dset_feature', type=int, default=4)
+	parser.add_argument('--frame_skip', type=int, default=1)
+	parser.add_argument('--num_epochs', type=int, default=30)
+	parser.add_argument('--pretrain_epochs', type=int, default=5)
+
+	args = parser.parse_args()
+
+	_, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
+	_, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+
+	exec_model(train_loader, test_loader, args)
+
+
+if __name__ == '__main__':
+	main()

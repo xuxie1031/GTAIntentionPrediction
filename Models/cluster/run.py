@@ -21,6 +21,15 @@ def exec_model(args):
     labels = kmeans.labels_
     labels = labels.reshape(n_traj, -1)
 
+    # repeat removal
+    for i in range(len(labels)):
+        history = np.zeros(args.k)
+        for j in range(len(labels[i])):
+            if history[labels[i][j]] == 0: 
+                history[labels[i][j]] = 1
+            else:
+                labels[i][j] = labels[i][j-1]
+
     for l_traj in labels:
         print(l_traj)
 
@@ -30,7 +39,7 @@ def exec_model(args):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--k', type=int, default=5)
+    parser.add_argument('--k', type=int, default=3)
     parser.add_argument('--path_name', type=str, default='saved_features')
     parser.add_argument('--file_name', type=str, default='feature_GTAS')
     parser.add_argument('--save_name', type=str, default='sentences_GTAS')

@@ -200,7 +200,7 @@ def main():
     parser.add_argument('--dset_tag', type=str, default='GTAS')
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=1)
-    parser.add_argument('--num_epochs', type=int, default=3)
+    parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--pretrain_epochs', type=int, default=5)
     parser.add_argument('--saved_name', type=str, default='GAEC5_GEP.pth.tar')
 

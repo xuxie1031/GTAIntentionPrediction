@@ -67,6 +67,7 @@ class STGCN3DGEPModel(nn.Module):
 		self.out_dim = args.out_dim
 		self.nc = args.nc
 		self.use_grammar = args.use_grammar
+		self.device = args.deivce
 
 		self.stgcn = STGCN3DModule(
 			args.inchannels,
@@ -105,8 +106,8 @@ class STGCN3DGEPModel(nn.Module):
 		assert one_hots_c_pred_seq.size(0) == self.pred_len
 
 		N, _, _, _, V = x.size()
-		pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim)
-		c_outs = torch.zeros(self.pred_len, N, self.nc)
+		pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim).to(self.device)
+		c_outs = torch.zeros(self.pred_len, N, self.nc).to(self.device)
 
 		x = self.stgcn(x, A)
 
