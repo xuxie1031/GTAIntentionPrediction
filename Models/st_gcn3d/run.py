@@ -15,7 +15,7 @@ from Dataset import *
 
 
 def exec_model(dataloader_train, dataloader_test, args):
-	net = STGCN3DModel(args.pred_len, args.in_channels, args.spatial_kernel, args.temporal_kernel, args.dec_hidden_size, args.out_dim, args.use_cuda, dropout=args.dropout)
+	net = STGCN3DModel(args.pred_len, args.in_channels, args.spatial_kernel, args.temporal_kernel, args.dec_hidden_size, args.out_dim, args.use_cuda, dropout=args.dropout, residual=args.residual)
 	optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
 	err_epochs = []
@@ -128,3 +128,13 @@ def main():
 	parser.add_argument('--batch_size', type=int, default=64)
 	parser.add_argument('--obs_len', type=int, default=9)
 	parser.add_argument('--pred_len', type=int, default=20)
+	parser.add_argument('--in_channels', type=int, default=4)
+	parser.add_argument('--out_dim', type=int, default=5)
+	parser.add_argument('--spatial_kernel', type=int, default=2)
+	parser.add_argument('--temporal_kernel', type=int, default=3)
+	parser.add_argument('--dec_hidden_size', type=int, default=256)
+	parser.add_argument('--lr', type=float, default=1e-4)
+	parser.add_argument('--grad_clip', type=float, default=10.0)
+	parser.add_argument('--dropout', type=float, default=0.5)
+	parser.add_argument('--residual', action='store_ture', default=True)
+	parser.add_argument('--gru', action='store_ture', default=False)
