@@ -116,28 +116,46 @@ def convert_one_hots(sentence, nc):
     return one_hots
 
 
-def convert_sentence(sentence_prob, grammar_gep, use_grammar=False):
-    seq_len, N, _ = sentence_prob.size()
+def convert_sentence(sentence_prob):
+    seq_len, N, k = sentence_prob.size()
     sentence_prob_np = sentence_prob.data.numpy()
 
     parsed_sentence = torch.zeros(seq_len, N, dtype=torch.long)
 
-    if not use_grammar:
-        for i in range(0, seq_len):
-            for num in range(N):
-                parsed_sentence[i, num] = torch.argmax(sentence_prob[i, num])
-    else:
+    history = torch.zeros(N, k)
+    curr_l = [None]*N
+
+    for i in range(0, seq_len):
         for num in range(N):
-            parsed_sentence[0, num] = torch.argmax(sentence_prob[0, num])
-        for i in range(1, seq_len):
-            for num in range(N):
-                sentence_seq = gep_parse(sentence_prob_np[:i, num, :], sentence_prob_np[i, num, :], grammar_gep)
-                parsed_sentence[i, num] = sentence_seq[-1]
+            parsed_sentence[i, num] = torch.argmax(sentence_prob[i, num])
+            if history[num, parsed_sentence[i, num]] == 0:
+                history[num, parsed_sentence[i, num]] = 1
+            else:
+                parsed_sentence[i, num] = parsed_sentence[i-1, num]
+    
+    for num in range(N):
+        curr_l = parsed_sentence[-1, num]
+        
+    return parsed_sentence, history, curr_l
+
+
+def gep_convert_sentence(sentence_prob):
+    seq_len, N, k = sentence_prob.size()
+    sentence_prob_np = sentence_prob.data.numpy()
+
+    parsed_sentence = torch.zeros(seq_len, N, dtype=torch.long)
+
+    for num in range(N):
+        parsed_sentence[0, num] = torch.argmax(sentence_prob[0, num])
+    for i in range(1, seq_len):
+        for num in range(N):
+            sentence_seq = gep_parse(sentence_prob_np[:i, num, :], sentence_prob_np[i, num, :], grammar_gep)
+            parsed_sentence[i, num] = sentence_seq[-1]
 
     return parsed_sentence
 
 
-def gep_obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, grammar_gep, nc, device=None):
+def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=None):
     if device is not None:
         batch_data_seq = batch_data_seq.to(device)
         s_gae = s_gae.to(device)
@@ -163,15 +181,21 @@ def gep_obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, grammar_g
     return torch.from_numpy(sentence_prob)
 
 
-def general_update(o_c):
+def general_update(o_c, history, curr_l):
     o_c_probs = F.softmax(o_c, dim=1)
     one_hots_c = torch.zeros(o_c_probs.size())
 
     for num in range(len(o_c)):
         label = torch.argmax(o_c_probs[num, :])
+        if history[label] == 0:
+            history[num, label] = 1
+            curr_l[num] = label
+        else:
+            label = curr_l[num]
         one_hots_c[num, label] = 1.0
 
-    return one_hots_c
+
+    return one_hots_c, history, curr_l
 
 
 def gep_predict_prob(steps, nc, grammar_gep):

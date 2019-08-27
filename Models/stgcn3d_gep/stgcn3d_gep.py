@@ -102,7 +102,7 @@ class STGCN3DGEPModel(nn.Module):
 	# x: (N, C, T, V, V); A: (N, V, V); one_hots_c_pred_seq: (L, N, NC)
 	# grammar_gep: _; gep_parsed_sentence: (N, _)
 	# will add gae only part
-	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep):
+	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep, history, curr_l):
 		assert one_hots_c_pred_seq.size(0) == self.pred_len
 
 		N, _, _, _, V = x.size()
@@ -129,7 +129,7 @@ class STGCN3DGEPModel(nn.Module):
 				if self.use_grammar:
 					one_hots_c = gep_update(o_c, grammar_gep)
 				else:
-					one_hots_c = general_update(o_c)
+					one_hots_c, history, curr_l = general_update(o_c, history, curr_l)
 
 			o_p = self.predictor(h, one_hots_c)
 			pred_outs[i] = o_p 
