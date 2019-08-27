@@ -12,15 +12,20 @@ class WriteOnceDict(dict):
 
 def data_vectorize(data_seq):
     first_value_dict = WriteOnceDict()
-    vectorized_seq = data_seq.clone()
+    vectorized_seq = []
 
     num_nodes = data_seq.size(1)
-    for i, frame in enumerate(data_seq):
+    frame0 = data_seq[0, :]
+    for node in range(num_nodes):
+        first_value_dict[node] = frame0[node, :]
+    for i in range(1, len(data_seq)):
+        frame = data_seq[i]
+        vectorized_frame = torch.zeros(num_nodes, data_seq.size(-1))
         for node in range(num_nodes):
-            first_value_dict[node] = frame[node, :]
-            vectorized_seq[i, node, :] = frame[node, :]-first_value_dict[node]
+            vectorized_frame[node] = frame[node, :]-first_value_dict[node]
+        vectorized_seq.append(vectorized_frame)
     
-    return vectorized_seq, first_value_dict
+    return torch.stack(vectorized_seq)
 
 
 def data_revert(data_seq, first_value_dict):
@@ -29,7 +34,7 @@ def data_revert(data_seq, first_value_dict):
     num_nodes = data_seq.size(1)
     for i, frame in enumerate(data_seq):
         for node in range(num_nodes):
-            reverted_seq[i, node, :] = frame[node, :]+first_value_dict[node]
+            reverted_seq[i, node, :] = frame[node, :]+first_value_dict[node][:2]
     
     return reverted_seq
 
@@ -44,7 +49,7 @@ def veh_ped_seperate(data_seq, ids, offset=100):
     return veh_seq, ped_seq
 
 
-def get_conv_mask(last_frame, frames, num_nodes, encoder_dim, neighbor_size, grid_size, units=(1.0, 1.0), use_cuda=True):
+def get_conv_mask(last_frame, frames, num_nodes, encoder_dim, neighbor_size, grid_size, units=(1.0, 1.0)):
     width_unit, height_unit = units[0], units[1]
     last_frame_mask = np.zeros((num_nodes, grid_size, grid_size, encoder_dim), dtype=np.uint8)
     last_frame_np = last_frame.cpu().numpy()
@@ -79,8 +84,6 @@ def get_conv_mask(last_frame, frames, num_nodes, encoder_dim, neighbor_size, gri
         
         other_grid2lookup = collections.OrderedDict(sorted(other_grid2lookup.items()))
         other_grid2lookup_idx = torch.tensor(list(other_grid2lookup.values())).long()
-        if use_cuda:
-            other_grid2lookup_idx = other_grid2lookup_idx.cuda()
 
         frames_nbr = torch.index_select(frames_permuted, 0, other_grid2lookup_idx)
         frames_nbrs.append(frames_nbr)

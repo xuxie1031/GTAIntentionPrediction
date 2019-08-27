@@ -15,7 +15,10 @@ from DataSet import *
 
 
 def exec_model(dataloader_train, dataloader_test, args):
-    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dec_hidden_size, args.out_dim, args.use_cuda, dropout=args.dropout)
+    if args.use_cuda:
+        dev = torch.device('cuda:'+str(args.gpu))
+
+    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout, residual=args.residual)
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     err_epochs = []
@@ -44,8 +47,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As = g.normalize_undigraph()
 
                 if args.use_cuda:
-                    inputs = inputs.cuda()
-                    As = As.cuda()
+                    inputs = inputs.to(dev)
+                    As = As.to(dev)
                 
                 preds = net(inputs, As)
 
@@ -56,7 +59,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                     else:
                         loss += nll_loss(preds[i], batch_pred_data[i])
                 loss_batch = loss.item() / batch_size
-                loss = loss.mean()
+                loss /= batch_size
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -95,8 +98,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                     As = g.normalize_undigraph()
 
                     if args.use_cuda:
-                        inputs = inputs.cuda()
-                        As = As.cuda()
+                        inputs = inputs.to(dev)
+                        As = As.to(dev)
                     
                     preds = net(inputs, As)
                     batch_ret_data = data_revert(preds[:, :, :, :2], first_values_dicts)
@@ -134,16 +137,20 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--residual', action='store_true', default=True)
+    parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
+    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--dset_name', type=str, default='GTADataset')
+    parser.add_argument('--dset_tag', type=str, default="GTAS")
+    parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--pretrain_epochs', type=int, default=5)
-    parser.add_argument('--dset_name', type=str, default='GTA')
-    parser.add_argument('--dset_feature', type=int, default=4)
 
     args = parser.parse_args()
 
-    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, 'train'))
-    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, 'test'))
+    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
+    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
 
     exec_model(train_loader, test_loader, args)
 
