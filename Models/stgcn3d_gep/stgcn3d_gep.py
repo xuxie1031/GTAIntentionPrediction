@@ -7,6 +7,8 @@ from .utils import *
 
 class ClassifierLayer(nn.Module):
 	def __init__(self, h_dim=256, nc=5):
+		super(ClassifierLayer, self).__init__()
+
 		self.nc = nc
 		self.fcn = nn.Conv2d(h_dim, nc, kernel_size=1)
 
@@ -28,6 +30,8 @@ class ClassifierLayer(nn.Module):
 
 class PredictionLayer(nn.Module):
 	def __init__(self, h_dim=256, e_h_dim=256, e_c_dim=256, nc=5, out_dim=5, activation='relu', batch_norm=True, dropout=0.0):
+		super(PredictionLayer, self).__init__()
+
 		self.enc_h = make_mlp(
 			[h_dim, e_h_dim],
 			activation=activation,
@@ -63,6 +67,8 @@ class PredictionLayer(nn.Module):
 
 class STGCN3DGEPModel(nn.Module):
 	def __init__(self, args, activation='relu', batch_norm=True):
+		super(STGCN3DGEPModel, self).__init__()
+
 		self.pred_len = args.pred_len
 		self.out_dim = args.out_dim
 		self.nc = args.nc

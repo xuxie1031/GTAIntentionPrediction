@@ -127,6 +127,13 @@ def exec_model(dataloader, args):
 
     torch.save(state, os.path.join('saved_features', args.save_name))
 
+    print('****** saving model ******')
+    if not os.path.exists('saved_models'): os.makedirs('saved_models')
+    state = {}
+    state['model'] = net
+
+    torch.save(state, os.path.join('saved_models', args.model_name))
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -148,6 +155,7 @@ def main():
     parser.add_argument('--frame_skip', type=int, default=1)
     parser.add_argument('--num_epochs', type=int, default=3)
     parser.add_argument('--save_name', type=str, default='feature_GTAS')
+    parser.add_argument('--model_name', type=str, default='SGAE.pth.tar')
 
     args = parser.parse_args()
 

@@ -35,6 +35,13 @@ def exec_model(args):
 
     np.savetxt(args.save_name, labels, delimiter=',')
 
+    print('****** saving model ******')
+    if not os.path.exists('saved_models'): os.makedirs('saved_models')
+    state = {}
+    state['model'] = kmeans
+
+    torch.save(state, os.path.join('saved_models', args.model_name))
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -43,6 +50,7 @@ def main():
     parser.add_argument('--path_name', type=str, default='saved_features')
     parser.add_argument('--file_name', type=str, default='feature_GTAS')
     parser.add_argument('--save_name', type=str, default='sentences_GTAS')
+    parser.add_argument('--model_name', type=str, default='Cluster.pth.tar')
 
     args = parser.parse_args()
     args.path_name = os.path.join('..', 's_gae', args.path_name)

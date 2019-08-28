@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from sklearn.cluster import KMeans
+
 import argparse
 import time
 from .st_gcn3d_gep import STGCN3DGEPModel
@@ -11,8 +13,11 @@ from .utils import *
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
+sys.path.append(os.path.join(os.getcwd(), '..', 's_gae'))
+sys.path.append(os.path.join(os.getcwd(), '..', '..', 'Saved'))
 from trajectories import *
 from loader import *
+from gcn_vae import *
 
 
 def exec_model(dataloader_train, dataloader_test, args):
@@ -21,8 +26,23 @@ def exec_model(dataloader_train, dataloader_test, args):
 
     stgcn_gep = STGCN3DGEPModel(args)
 
-    state = torch.load(args.saved_name)
-    s_gae = state['gae']
+    if not os.path.exists('models'): 
+        os.makedirs('models')
+        saved_state = {}
+        
+        state = torch.load(os.path.join('..', 's_gae', 'saved_model', 'SGAE.pth.tar'))
+        saved_state['sgae'] = state['model']
+
+        state = torch.load(os.path.join('..', 'cluster', 'saved_model', 'Cluster.pth.tar'))
+        saved_state['cluster'] = state['model']
+
+        # grammar to be added
+        saved_state['grammar'] = None
+
+        torch.save(state, os.path.join('models', args.saved_name))
+
+    state = torch.load(os.path.join('models', args.saved_name))
+    s_gae = state['sgae']
     cluster_obj = state['cluster']
     grammar_gep = state['grammar']
 
@@ -209,7 +229,7 @@ def main():
     parser.add_argument('--frame_skip', type=int, default=1)
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--pretrain_epochs', type=int, default=5)
-    parser.add_argument('--saved_name', type=str, default='GAEC5_GEP.pth.tar')
+    parser.add_argument('--saved_name', type=str, default='GAEC3_GEP.pth.tar')
 
     args = parser.parse_args()
 
