@@ -140,7 +140,7 @@ def main():
 
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--obs_len', type=int, default=8)
+    parser.add_argument('--obs_len', type=int, default=9)
     parser.add_argument('--pred_len', type=int, default=20)
     parser.add_argument('--in_channels', type=int, default=4)
     parser.add_argument('--h_dim1', type=int, default=128)

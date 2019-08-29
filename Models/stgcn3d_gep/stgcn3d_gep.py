@@ -32,11 +32,23 @@ class PredictionLayer(nn.Module):
 	def __init__(self, h_dim=256, e_h_dim=256, e_c_dim=256, nc=5, out_dim=5, activation='relu', batch_norm=True, dropout=0.0):
 		super(PredictionLayer, self).__init__()
 
-		self.enc_h = nn.Linear(h_dim, e_h_dim)
-		self.bn_h = nn.BatchNorm1d(e_h_dim)
+		# self.enc_h = nn.Linear(h_dim, e_h_dim)
+		# self.bn_h = nn.BatchNorm1d(e_h_dim)
 
-		self.enc_c = nn.Linear(nc, e_c_dim)
-		self.bn_c = nn.BatchNorm1d(e_c_dim)
+		# self.enc_c = nn.Linear(nc, e_c_dim)
+		# self.bn_c = nn.BatchNorm1d(e_c_dim)
+
+		self.enc_h = nn.Sequential(
+			nn.Conv2d(h_dim, e_h_dim, kernel_size=1),
+			nn.BatchNorm2d(e_h_dim),
+			nn.ReLU(inplace=True)
+		)
+
+		self.enc_c = nn.Sequential(
+			nn.Conv2d(h_dim, e_c_dim, kernel_size=1),
+			nn.BatchNorm2d(e_c_dim),
+			nn.ReLU(inplace=True)
+		)
 
 		self.out = nn.Linear(e_h_dim+e_c_dim, out_dim)
 
@@ -51,22 +63,36 @@ class PredictionLayer(nn.Module):
 	def forward(self, x, one_hots_c):
 		assert len(x.size()) == 3
 		assert len(one_hots_c.size()) == 2
-		
+
+		# N, V, H = x.size()
+		# x = self.enc_h(x)
+		# x = x.view(N*V, -1)
+		# x = self.bn_h(x)
+		# x = x.view(N, V, -1)
+		# x = self.dropout(self.relu(x))
+
+		# one_hots_c = one_hots_c.unsqueeze(1).repeat(1, V, 1)
+		# one_hots_c = self.enc_c(one_hots_c)
+		# one_hots_c = one_hots_c.view(N*V, -1)
+		# one_hots_c = self.bn_c(one_hots_c)
+		# one_hots_c = one_hots_c.view(N, V, -1)
+		# one_hots_c = self.dropout(self.relu(one_hots_c))
+
 		N, V, H = x.size()
+
+		x = x.permute(0, 2, 1).contiguous()
+		x = x.view(N, H, V, 1)
 		x = self.enc_h(x)
-		x = x.view(N*V, -1)
-		x = self.bn_h(x)
 		x = x.view(N, V, -1)
-		x = self.dropout(self.relu(x))
 
 		one_hots_c = one_hots_c.unsqueeze(1).repeat(1, V, 1)
+		one_hots_c = one_hots_c.permute(0, 2, 1).contiguous()
+		one_hots_c = one_hots_c.view(N, -1, V, 1)
 		one_hots_c = self.enc_c(one_hots_c)
-		one_hots_c = one_hots_c.view(N*V, -1)
-		one_hots_c = self.bn_c(one_hots_c)
 		one_hots_c = one_hots_c.view(N, V, -1)
-		one_hots_c = self.dropout(self.relu(one_hots_c))
 
 		x = torch.cat((x, one_hots_c), 2)
+
 		out = self.out(x)
 
 		return out
