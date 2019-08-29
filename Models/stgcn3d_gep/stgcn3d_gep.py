@@ -45,7 +45,7 @@ class PredictionLayer(nn.Module):
 		)
 
 		self.enc_c = nn.Sequential(
-			nn.Conv2d(h_dim, e_c_dim, kernel_size=1),
+			nn.Conv2d(nc, e_c_dim, kernel_size=1),
 			nn.BatchNorm2d(e_c_dim),
 			nn.ReLU(inplace=True)
 		)

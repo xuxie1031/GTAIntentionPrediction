@@ -8,6 +8,7 @@ dataset
 saved_features
 
 record*
+sentences*
 *.pth.tar
 
 
