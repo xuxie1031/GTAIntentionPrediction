@@ -219,7 +219,7 @@ class GTADataset():
 
     
     def data_save(self, converted_data):
-        bound = int(converted_data.shape[0]*0.7)
+        bound = int(converted_data.shape[0]*0.6)
         train_data = converted_data[:bound, :]
         test_data = converted_data[bound:, :]
 
@@ -246,5 +246,5 @@ class GTADataset():
             self.data_save(converted_data)
 
 # start preprocess
-pre_dset = GTADataset('/home/xuxie/Dataset/traj_dataset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
+pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
 pre_dset.pipeline()

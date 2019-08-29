@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from .graph import *
-from .utils import *
+from graph import *
+from utils import *
 
 class GraphConvNet3D(nn.Module):
     def __init__(self, in_channels, out_channels, s_kernel_size=1, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1, bias=True):
@@ -107,16 +107,19 @@ class STGCN3DModule(nn.Module):
         N, C, T, U, V = x.size()
         x = x.permute(0, 3, 4, 1, 2).contiguous()
         x = x.view(N, U*V*C, T)
-        data_bn = nn.BatchNorm1d(U*V*C, affine=False)
-        x = data_bn(x)
+        data_bn = nn.BatchNorm1d(U*V*C, affine=False).to(x)
+        x = data_bn(x)        
         x = x.view(N, U, V, C, T)
         x = x.permute(0, 3, 4, 1, 2).contiguous()
 
         for gcn in self.st_gcn3d_modules:
             x, _ = gcn(x, A)
         
+        _, C, T, _, _ = x.size()
         x = x.permute(0, 4, 1, 2, 3).contiguous()
-        data_pool = nn.AvgPool2d((T, U))
+        x = x.view(N*V, C, T, U)
+
+        data_pool = nn.AvgPool2d((T, U)).to(x)
         x = data_pool(x)
         x = x.view(-1, V, C)
 

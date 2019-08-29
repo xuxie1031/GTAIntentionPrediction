@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .st_gcn3d import *
-from .utils import *
+from st_gcn3d import *
+from utils import *
 
 class ClassifierLayer(nn.Module):
 	def __init__(self, h_dim=256, nc=5):
@@ -32,21 +32,20 @@ class PredictionLayer(nn.Module):
 	def __init__(self, h_dim=256, e_h_dim=256, e_c_dim=256, nc=5, out_dim=5, activation='relu', batch_norm=True, dropout=0.0):
 		super(PredictionLayer, self).__init__()
 
-		self.enc_h = make_mlp(
-			[h_dim, e_h_dim],
-			activation=activation,
-			batch_norm=batch_norm,
-			dropout=dropout
-		)
+		self.enc_h = nn.Linear(h_dim, e_h_dim)
+		self.bn_h = nn.BatchNorm1d(e_h_dim)
 
-		self.enc_c = make_mlp(
-			[nc, e_c_dim],
-			activation=activation,
-			batch_norm=batch_norm,
-			dropout=dropout
-		)
+		self.enc_c = nn.Linear(nc, e_c_dim)
+		self.bn_c = nn.BatchNorm1d(e_c_dim)
 
 		self.out = nn.Linear(e_h_dim+e_c_dim, out_dim)
+
+		if activation == 'relu':
+			self.relu = nn.ReLU()
+		elif activation == 'leakyrelu':
+			self.relu = nn.LeakyReLU()
+
+		self.dropout = nn.Dropout(p=dropout)
 
 
 	def forward(self, x, one_hots_c):
@@ -55,9 +54,17 @@ class PredictionLayer(nn.Module):
 		
 		N, V, H = x.size()
 		x = self.enc_h(x)
+		x = x.view(N*V, -1)
+		x = self.bn_h(x)
+		x = x.view(N, V, -1)
+		x = self.dropout(self.relu(x))
 
 		one_hots_c = one_hots_c.unsqueeze(1).repeat(1, V, 1)
 		one_hots_c = self.enc_c(one_hots_c)
+		one_hots_c = one_hots_c.view(N*V, -1)
+		one_hots_c = self.bn_c(one_hots_c)
+		one_hots_c = one_hots_c.view(N, V, -1)
+		one_hots_c = self.dropout(self.relu(one_hots_c))
 
 		x = torch.cat((x, one_hots_c), 2)
 		out = self.out(x)
@@ -66,17 +73,17 @@ class PredictionLayer(nn.Module):
 
 
 class STGCN3DGEPModel(nn.Module):
-	def __init__(self, args, activation='relu', batch_norm=True):
+	def __init__(self, args, device=None, activation='relu', batch_norm=True):
 		super(STGCN3DGEPModel, self).__init__()
 
 		self.pred_len = args.pred_len
 		self.out_dim = args.out_dim
 		self.nc = args.nc
 		self.use_grammar = args.use_grammar
-		self.device = args.deivce
+		self.device = device
 
 		self.stgcn = STGCN3DModule(
-			args.inchannels,
+			args.in_channels,
 			args.cell_input_dim,
 			args.spatial_kernel_size,
 			args.temporal_kernel_size,
@@ -102,15 +109,13 @@ class STGCN3DGEPModel(nn.Module):
 		)
 
 		if args.use_cuda:
-			self.to(args.device)
+			self.to(device)
 
 	# one_hots_c_seq forms differently in train / test
 	# x: (N, C, T, V, V); A: (N, V, V); one_hots_c_pred_seq: (L, N, NC)
 	# grammar_gep: _; gep_parsed_sentence: (N, _)
 	# will add gae only part
 	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep, history, curr_l):
-		assert one_hots_c_pred_seq.size(0) == self.pred_len
-
 		N, _, _, _, V = x.size()
 		pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim).to(self.device)
 		c_outs = torch.zeros(self.pred_len, N, self.nc).to(self.device)
@@ -122,7 +127,7 @@ class STGCN3DGEPModel(nn.Module):
 		x = x.repeat(self.pred_len, 1, 1)
 
 		for i in range(self.pred_len):
-			h = self.cell(x[i])
+			h, _ = self.cell(x[i])
 			_, H = h.size()
 			h = h.view(N, V, H)
 

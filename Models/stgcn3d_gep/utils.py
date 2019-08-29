@@ -46,6 +46,7 @@ def data_feeder_gae(batch_data):
         for j in range(V):
             data[:, :, i, j, :2] = batch_data[:, :, i, :2]
             data[:, :, i, j, 2:] = batch_data[:, :, j, :2]
+    data = data.permute(0, 1, 4, 2, 3).contiguous()
     data = data.permute(1, 0, 2, 3, 4).contiguous()
 
     return data
@@ -85,7 +86,7 @@ def data_revert(batch_data_seq, first_value_dicts):
         num_nodes = data_seq.size(1)
         for j, frame in enumerate(data_seq):
             for node in range(num_nodes):
-                reverted_seq[j, node, :2] = frame[node, :2]+first_value_dict[node][:2]
+                reverted_seq[j, node, :2] = frame[node, :2]+first_value_dict[node][:2].to(frame)
         batch_reverted_seq.append(reverted_seq)
 
     return torch.stack(batch_reverted_seq)
@@ -134,7 +135,7 @@ def convert_sentence(sentence_prob):
                 parsed_sentence[i, num] = parsed_sentence[i-1, num]
     
     for num in range(N):
-        curr_l = parsed_sentence[-1, num]
+        curr_l[num] = parsed_sentence[-1, num]
         
     return parsed_sentence, history, curr_l
 
@@ -166,7 +167,8 @@ def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=No
 
     feature_seq = []
     for i in range(seq_len):
-        _, mu, _ = s_gae(data[i], As_seq[i])
+	A = torch.sum(As_seq[i], 1)
+        _, mu, _ = s_gae(data[i], A)
         mu = mu.permute(0, 2, 1).contiguous()
         mu = mu.mean(-1)
         feature_seq.append(mu.data.cpu().numpy())
@@ -183,15 +185,15 @@ def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=No
 
 def general_update(o_c, history, curr_l):
     o_c_probs = F.softmax(o_c, dim=1)
-    one_hots_c = torch.zeros(o_c_probs.size())
+    one_hots_c = torch.zeros(o_c_probs.size()).to(o_c)
 
     for num in range(len(o_c)):
         label = torch.argmax(o_c_probs[num, :])
-        if history[label] == 0:
+        if history[num, label] == 0:
             history[num, label] = 1
             curr_l[num] = label
         else:
-            label = curr_l[num]
+            label = curr_l[num].item()
         one_hots_c[num, label] = 1.0
 
 
