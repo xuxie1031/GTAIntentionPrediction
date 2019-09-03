@@ -121,7 +121,14 @@ def exec_model(dataloader_train, dataloader_test, args):
                 torch.nn.utils.clip_grad_norm_(stgcn_gep.parameters(), args.grad_clip)
                 optim_classifier.step()
 
-                pred_outs, _ = stgcn_gep(inputs, As, one_hots_c_pred_seq, None, None, None)
+		hidden_states = torch.zeros(batch_size, num, args.cell_h_dim)
+		cell_states = torch.zeros(batch_size, num, args.cell_h_dim)
+
+		if args.use_cuda:
+			hidden_states = hidden_states.to(dev)
+			cell_states = cell_states.to(dev)
+
+                pred_outs, _ = stgcn_gep(inputs, As, hidden_states, cell_states, one_hots_c_pred_seq, None, None, None)
 
                 loss_p = 0.0
                 for i in range(len(pred_outs)):
@@ -192,7 +199,6 @@ def exec_model(dataloader_train, dataloader_test, args):
                     hidden_states = hidden_states.to(dev)
                     cell_states = cell_states.to(dev)
                 
-                # need to modify inside
                 pred_outs, _ = stgcn_gep(inputs, As, hidden_states, cell_states, None, grammar_gep, history, curr_l)
 
                 pred_rets = data_revert(pred_outs, first_value_dicts)
@@ -231,14 +237,14 @@ def main():
     parser.add_argument('--cell_h_dim', type=int, default=256)
     parser.add_argument('--e_h_dim', type=int, default=256)
     parser.add_argument('--e_c_dim', type=int, default=256)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--residual', action='store_true', default=True)
     parser.add_argument('--gru', action='store_true', default=True)
     parser.add_argument('--use_grammar', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
-    parser.add_argument('--gpu', type=int, default=3)
+    parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--dset_name', type=str, default='GTADataset')
     parser.add_argument('--dset_tag', type=str, default='GTAS')
     parser.add_argument('--dset_feature', type=int, default=4)

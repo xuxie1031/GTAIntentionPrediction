@@ -151,11 +151,11 @@ class STGCN3DGEPModel(nn.Module):
 		for i in range(self.pred_len):
 			for num in range(N):
 				if self.gru:
-					hidden_states[num] = self.cell(x[i, num], hidden_states[num])
+					hidden_states[num] = self.cell(x[i, num], hidden_states[num].clone())
 				else:
-					hidden_states[num], cell_states[num] = self.cell(x[i, num], (hidden_states[num], cell_states[num]))
+					hidden_states[num], cell_states[num] = self.cell(x[i, num], (hidden_states[num].clone(), cell_states[num].clone()))
 
-			o_c = self.classifier(hidden_states)
+			o_c = self.classifier(hidden_states.clone())
 			c_outs[i] = o_c
 
 			if self.training:
@@ -166,7 +166,7 @@ class STGCN3DGEPModel(nn.Module):
 				else:
 					one_hots_c, history, curr_l = general_update(o_c, history, curr_l)
 
-			o_p = self.predictor(h, one_hots_c)
+			o_p = self.predictor(hidden_states.clone(), one_hots_c)
 			pred_outs[i] = o_p 
 		
 		pred_outs = pred_outs.permute(1, 0, 2, 3).contiguous()
