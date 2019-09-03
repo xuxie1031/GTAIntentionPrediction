@@ -134,10 +134,11 @@ class STGCN3DGEPModel(nn.Module):
 			self.to(device)
 
 	# one_hots_c_seq forms differently in train / test
-	# x: (N, C, T, V, V); A: (N, V, V); one_hots_c_pred_seq: (L, N, NC)
+	# x: (N, C, T, V, V); A: (N, V, V); hidden_states: (N, V, H); cell_states: (N, V, C)
+	# one_hots_c_pred_seq: (L, N, NC)
 	# grammar_gep: _; gep_parsed_sentence: (N, _)
 	# will add gae only part
-	def forward(self, x, A, one_hots_c_pred_seq, grammar_gep, history, curr_l):
+	def forward(self, x, A, hidden_states, cell_states, one_hots_c_pred_seq, grammar_gep, history, curr_l):
 		N, _, _, _, V = x.size()
 		pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim).to(self.device)
 		c_outs = torch.zeros(self.pred_len, N, self.nc).to(self.device)
@@ -145,18 +146,16 @@ class STGCN3DGEPModel(nn.Module):
 		x = self.stgcn(x, A)
 
 		N, V, C = x.size()
-		x = x.view(-1, C)
-		x = x.repeat(self.pred_len, 1, 1)
+		x = x.repeat(self.pred_len, 1, 1, 1)
 
 		for i in range(self.pred_len):
-			if self.gru:
-				h = self.cell(x[i])
-			else:
-				h, _ = self.cell(x[i])
-			_, H = h.size()
-			h = h.view(N, V, H)
+			for num in range(N):
+				if self.gru:
+					hidden_states[num] = self.cell(x[i, num], hidden_states[num])
+				else:
+					hidden_states[num], cell_states[num] = self.cell(x[i, num], (hidden_states[num], cell_states[num]))
 
-			o_c = self.classifier(h)
+			o_c = self.classifier(hidden_states)
 			c_outs[i] = o_c
 
 			if self.training:

@@ -96,14 +96,19 @@ def exec_model(dataloader_train, dataloader_test, args):
                 one_hots_c_pred_seq = convert_one_hots(obs_sentence[-args.pred_len:, :], args.nc)
                 gd_label_seq = obs_sentence[-args.pred_len:, :]
 
+                hidden_states = torch.zeros(batch_size, num, args.cell_h_dim)
+                cell_states = torch.zeros(batch_size, num, args.cell_h_dim)
+
                 if args.use_cuda:
                     inputs = inputs.to(dev)
                     batch_pred_data = batch_pred_data.to(dev)
                     As = As.to(dev)
                     one_hots_c_pred_seq = one_hots_c_pred_seq.to(dev)
                     gd_label_seq = gd_label_seq.to(dev)
+                    hidden_states = hidden_states.to(dev)
+                    cell_states = cell_states.to(dev)
                 
-                _, c_outs = stgcn_gep(inputs, As, one_hots_c_pred_seq, None, None, None)
+                _, c_outs = stgcn_gep(inputs, As, hidden_states, cell_states, one_hots_c_pred_seq, None, None, None)
 
                 loss_c = 0.0
                 for i in range(len(c_outs)):
@@ -176,14 +181,19 @@ def exec_model(dataloader_train, dataloader_test, args):
                     obs_sentence_prob = obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
                     obs_sentence, history, curr_l = convert_sentence(obs_sentence_prob)
 
+                hidden_states = torch.zeros(batch_size, num, args.cell_h_dim)
+                cell_states = torch.zeros(batch_size, num, args.cell_h_dim)
+
                 if args.use_cuda:
                     inputs = inputs.to(dev)
                     batch_pred_data = batch_pred_data.to(dev)
                     As = As.to(dev)
                     history = history.to(dev)
+                    hidden_states = hidden_states.to(dev)
+                    cell_states = cell_states.to(dev)
                 
                 # need to modify inside
-                pred_outs, _ = stgcn_gep(inputs, As, None, grammar_gep, history, curr_l)
+                pred_outs, _ = stgcn_gep(inputs, As, hidden_states, cell_states, None, grammar_gep, history, curr_l)
 
                 pred_rets = data_revert(pred_outs, first_value_dicts)
                 pred_rets = pred_rets[:, :, :, :2]
