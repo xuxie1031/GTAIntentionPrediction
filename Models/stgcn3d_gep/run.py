@@ -25,7 +25,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     if args.use_cuda:
         dev = torch.device('cuda:'+str(args.gpu))
 
-    stgcn_gep = STGCN3DGEPModel(args, device=dev, activation='leakyrelu')
+    stgcn_gep = STGCN3DGEPModel(args, device=dev, activation='relu')
 
     if not os.path.exists('models'): 
         os.makedirs('models')
@@ -222,10 +222,10 @@ def main():
     parser.add_argument('--e_h_dim', type=int, default=256)
     parser.add_argument('--e_c_dim', type=int, default=256)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--grad_clip', type=float, default=1.0)
+    parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--residual', action='store_true', default=True)
-    parser.add_argument('--gru', action='store_true', default=False)
+    parser.add_argument('--gru', action='store_true', default=True)
     parser.add_argument('--use_grammar', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--gpu', type=int, default=3)
@@ -233,8 +233,8 @@ def main():
     parser.add_argument('--dset_tag', type=str, default='GTAS')
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=1)
-    parser.add_argument('--num_epochs', type=int, default=50)
-    parser.add_argument('--pretrain_epochs', type=int, default=5)
+    parser.add_argument('--num_epochs', type=int, default=150)
+    parser.add_argument('--pretrain_epochs', type=int, default=0)
     parser.add_argument('--saved_name', type=str, default='GAEC3_GEP.pth.tar')
 
     args = parser.parse_args()
