@@ -122,7 +122,7 @@ class STGCN3DModel(nn.Module):
 
         x = x.permute(0, 3, 4, 1, 2).contiguous()
         x = x.view(N, U*V*C, T)
-        data_bn = nn.BatchNorm1d(U*V*C, affine=False)
+        data_bn = nn.BatchNorm1d(U*V*C, affine=False).to(x)
         x = data_bn(x)
         x = x.view(N, U, V, C, T)
         x = x.permute(0, 3, 4, 1, 2).contiguous()
@@ -131,7 +131,7 @@ class STGCN3DModel(nn.Module):
             x, _ = gcn(x, A)
         
         x = x.permute(0, 4, 1, 2, 3).contiguous()
-        data_pool = nn.AvgPool2d((T, U))
+        data_pool = nn.AvgPool2d((T, U)).to(x)
         x = data_pool(x)
         x = x.view(-1, V, C)
 
