@@ -99,13 +99,13 @@ class NGSIMDataset():
     def data_files(self):
         path = os.path.join(self.dset_path, self.base_path)
         for name in os.listdir(path):
-            if os.path.isfile(name):
-                file = os.path.join(path, name)
+            file = os.path.join(path, name)
+            if os.path.isfile(file):
                 self.files.append(file)
     
 
     def data_convert(self, file):
-        raw_data = np.loadtxt(file, delimiter=',', usecols=(0, 1, 2, 3), skiprows=1)
+        raw_data = np.loadtxt(file, delimiter=',', usecols=(0, 2, 3, 13), skiprows=1)
         converted_data = []
 
         data = raw_data[np.argsort(raw_data[:, 0])]
@@ -115,13 +115,13 @@ class NGSIMDataset():
             data_seg = data[data[:, 0] == agent_id, :]
             converted_data_seg = np.zeros((data_seg.shape[0], 6))
 
-            data_seg_x = data_seg[:, 3]
-            data_seg_y = data_seg[:, 2]
+            data_seg_x = data_seg[:, 2]
+            data_seg_y = data_seg[:, 1]
             data_seg_vx = data_seg_x[1:]-data_seg_x[:-1]
             data_seg_vy = data_seg_y[1:]-data_seg_y[:-1]
             data_seg_vx, data_seg_vy = np.append(data_seg_vx, 0.0), np.append(data_seg_vy, 0.0)
 
-            converted_data_seg[:, 0] = data_seg[:, 1]
+            converted_data_seg[:, 0] = data_seg[:, 3]
             converted_data_seg[:, 1] = data_seg[:, 0]
             converted_data_seg[:, 2] = data_seg_x
             converted_data_seg[:, 3] = data_seg_y
@@ -219,7 +219,7 @@ class GTADataset():
 
     
     def data_save(self, converted_data):
-        bound = int(converted_data.shape[0]*0.6)
+        bound = int(converted_data.shape[0]*0.7)
         train_data = converted_data[:bound, :]
         test_data = converted_data[bound:, :]
 
@@ -246,5 +246,6 @@ class GTADataset():
             self.data_save(converted_data)
 
 # start preprocess
-pre_dset = GTADataset('/mnt/Data/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
+# pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
+pre_dset = NGSIMDataset('/mnt/Dataset/TrajDset/NGSIM', save_path='dataset')
 pre_dset.pipeline()

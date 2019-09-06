@@ -133,8 +133,8 @@ def main():
 
 	parser.add_argument('--num_worker', type=int, default=4)
 	parser.add_argument('--batch_size', type=int, default=64)
-	parser.add_argument('--obs_len', type=int, default=9)
-	parser.add_argument('--pred_len', type=int, default=20)
+	parser.add_argument('--obs_len', type=int, default=15)
+	parser.add_argument('--pred_len', type=int, default=25)
 	parser.add_argument('--in_channels', type=int, default=4)
 	parser.add_argument('--out_dim', type=int, default=5)
 	parser.add_argument('--spatial_kernel', type=int, default=2)
@@ -146,18 +146,34 @@ def main():
 	parser.add_argument('--residual', action='store_true', default=True)
 	parser.add_argument('--gru', action='store_true', default=True)
 	parser.add_argument('--use_cuda', action='store_true', default=True)
-	parser.add_argument('--gpu', type=int, default=0)
-	parser.add_argument('--dset_name', type=str, default='GTADataset')
-	parser.add_argument('--dset_tag', type=str, default='GTAS')
+	parser.add_argument('--gpu', type=int, default=3)
+	parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
+	parser.add_argument('--dset_tag', type=str, default='')
 	parser.add_argument('--dset_feature', type=int, default=4)
-	parser.add_argument('--frame_skip', type=int, default=1)
+	parser.add_argument('--frame_skip', type=int, default=2)
 	parser.add_argument('--num_epochs', type=int, default=400)
 	parser.add_argument('--pretrain_epochs', type=int, default=0)
 
 	args = parser.parse_args()
 
-	_, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
-	_, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+	loader_name = args.dset_name+'_loader.pth.tar'
+	if os.path.exists(loader_name):
+		assert os.path.isfile(loader_name)
+		state = torch.load(loader_name)
+		
+		train_loader = state['train']
+		test_loader = state['test']
+	else:
+		_, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
+		_, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+		
+		state = {}
+		state['train'] = train_loader
+		state['test'] = test_loader
+		torch.save(state, loader_name)
+
+	print(len(train_loader))
+	print(len(test_loader))
 
 	exec_model(train_loader, test_loader, args)
 

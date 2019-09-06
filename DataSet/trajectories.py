@@ -88,18 +88,18 @@ class TrajectoryDataset(Dataset):
                     num_nodes += 1
 
                 # collect sequence in sparse fashion
-                # num_nodes = 0
-                # for agent_id in agents_in_curr_seq:
-                #    curr_agent_seq = curr_seq_data[agent_id == curr_seq_data[:, 1], :]
-                #    curr_agent_seq = np.around(curr_agent_seq, decimals=4)
-                #    if len(curr_agent_seq) != self.seq_len:
-                #        agent_flag = False
-                #        break
-                #    curr_agent_seq = np.transpose(curr_agent_seq[:, 2:2+self.num_feature])
-                #    _idx = num_nodes
-                #    curr_seq[_idx, :, :] = curr_agent_seq
-                #    curr_ids[_idx] = agent_id
-                #    num_nodes += 1
+                #num_nodes = 0
+                #for agent_id in agents_in_curr_seq:
+                #   curr_agent_seq = curr_seq_data[agent_id == curr_seq_data[:, 1], :]
+                #   curr_agent_seq = np.around(curr_agent_seq, decimals=4)
+                #   if len(curr_agent_seq) != self.seq_len:
+                #       agent_flag = False
+                #       break
+                #   curr_agent_seq = np.transpose(curr_agent_seq[:, 2:2+self.num_feature])
+                #   _idx = num_nodes
+                #   curr_seq[_idx, :, :] = curr_agent_seq
+                #   curr_ids[_idx] = agent_id
+                #   num_nodes += 1
 
                 # count_veh = len(np.argwhere(curr_ids[:num_nodes] < 100))
                 # count_ped = len(np.argwhere(curr_ids[:num_nodes] >= 100))
