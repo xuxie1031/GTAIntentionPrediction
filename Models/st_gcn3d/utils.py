@@ -69,7 +69,7 @@ def data_revert(batch_data_seq, first_value_dicts):
         num_nodes = data_seq.size(1)
         for j, frame in enumerate(data_seq):
             for node in range(num_nodes):
-                reverted_seq[j, node, :] = frame[node, :]+first_value_dict[node][:2]
+                reverted_seq[j, node, :2] = frame[node, :2]+first_value_dict[node][:2].to(frame)
         batch_reverted_seq.append(reverted_seq)
 
     return torch.stack(batch_reverted_seq)

@@ -4,17 +4,19 @@ import torch.optim as optim
 
 import argparse
 import time
-from .st_gcn3d import STGCN3DModel
-from .graph import Graph
-from .utils import *
+from st_gcn3d import STGCN3DModel
+from graph import Graph
+from utils import *
 
 import os
 import sys
-sys.path.append(os.path.join(os.getcwd(), '..', '..'))
-from Dataset import *
+sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
+from trajectories import *
+from loader import *
 
 
 def exec_model(dataloader_train, dataloader_test, args):
+	dev = torch.device('cpu')
 	if args.use_cuda:
 		dev = torch.device('cuda:'+str(args.gpu))
 
@@ -50,6 +52,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 				if args.use_cuda:
 					inputs = inputs.to(dev)
 					As = As.to(dev)
+					batch_pred_data = batch_pred_data.to(dev)
 
 				preds = net(inputs, As)
 
@@ -99,8 +102,9 @@ def exec_model(dataloader_train, dataloader_test, args):
 				As = g.normalize_undigraph()
 
 				if args.use_cuda:
-					inputs = inputs.cuda()
-					As = As.cuda()
+					inputs = inputs.to(dev)
+					As = As.to(dev)
+					batch_pred_data = batch_pred_data.to(dev)
 
 				pred_outs = net(inputs, As)
 
@@ -109,7 +113,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 				error = 0.0
 				for i in range(len(pred_rets)):
-					error += displacement_error(pred_rets[i], batch_pred_data[i])
+					error += displacement_error(pred_rets[i], batch_pred_data[i, :, :, :2])
 				err_batch += error.item() / batch_size
 
 			t_end = time.time()
@@ -136,19 +140,19 @@ def main():
 	parser.add_argument('--spatial_kernel', type=int, default=2)
 	parser.add_argument('--temporal_kernel', type=int, default=3)
 	parser.add_argument('--dec_hidden_size', type=int, default=256)
-	parser.add_argument('--lr', type=float, default=1e-4)
-	parser.add_argument('--grad_clip', type=float, default=10.0)
+	parser.add_argument('--lr', type=float, default=1e-3)
+	parser.add_argument('--grad_clip', type=float, default=1.0)
 	parser.add_argument('--dropout', type=float, default=0.5)
-	parser.add_argument('--residual', action='store_ture', default=True)
-	parser.add_argument('--gru', action='store_ture', default=False)
+	parser.add_argument('--residual', action='store_true', default=True)
+	parser.add_argument('--gru', action='store_true', default=True)
 	parser.add_argument('--use_cuda', action='store_true', default=True)
 	parser.add_argument('--gpu', type=int, default=0)
 	parser.add_argument('--dset_name', type=str, default='GTADataset')
 	parser.add_argument('--dset_tag', type=str, default='GTAS')
 	parser.add_argument('--dset_feature', type=int, default=4)
 	parser.add_argument('--frame_skip', type=int, default=1)
-	parser.add_argument('--num_epochs', type=int, default=30)
-	parser.add_argument('--pretrain_epochs', type=int, default=5)
+	parser.add_argument('--num_epochs', type=int, default=400)
+	parser.add_argument('--pretrain_epochs', type=int, default=0)
 
 	args = parser.parse_args()
 
