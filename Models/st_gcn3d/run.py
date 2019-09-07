@@ -31,12 +31,10 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 		num_batch = 0
 		for batch in dataloader_train:
-			t_start = time.time()
 			input_data_list, pred_data_list, _, num_node_list = batch
-
-			loss_batch = 0.0
 			num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_node_list)
 			for num in num2input_dict.keys():
+				t_start = time.time()
 				batch_size = len(num2input_dict[num])
 				batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
 
@@ -71,11 +69,12 @@ def exec_model(dataloader_train, dataloader_test, args):
 				torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
 				optimizer.step()
 			
-			t_end = time.time()
-			loss_epoch += loss_batch
-			num_batch += 1
+				t_end = time.time()
+				loss_epoch += loss_batch
+				num_batch += 1
 
-			print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
+				print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
+				break
 
 		loss_epoch /= num_batch
 		print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
@@ -86,15 +85,14 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 		num_batch = 0
 		for batch in dataloader_test:
-			t_start = time.time()
 			input_data_list, pred_data_list, _, num_node_list = batch
-
-			err_batch = 0.0
 			num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_node_list)
 			for num in num2input_dict.keys():
+				t_start = time.time()
+				err_batch = 0.0
 				batch_size = len(num2input_dict[num])
 				batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
-
+				
 				batch_input_data, first_value_dicts = data_vectorize(batch_input_data)
 				inputs = data_feeder(batch_input_data)
 
@@ -115,12 +113,12 @@ def exec_model(dataloader_train, dataloader_test, args):
 				for i in range(len(pred_rets)):
 					error += displacement_error(pred_rets[i], batch_pred_data[i, :, :, :2])
 				err_batch += error.item() / batch_size
+				
+				t_end = time.time()
+				err_epoch += err_batch
+				num_batch += 1
 
-			t_end = time.time()
-			err_epoch += err_batch
-			num_batch += 1
-
-			print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.4f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+				print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.4f}'.format(epoch, num_batch, err_batch, t_end-t_start))
 
 		err_epoch /= num_batch
 		err_epochs.append(err_epoch)
@@ -140,7 +138,7 @@ def main():
 	parser.add_argument('--spatial_kernel', type=int, default=2)
 	parser.add_argument('--temporal_kernel', type=int, default=3)
 	parser.add_argument('--dec_hidden_size', type=int, default=256)
-	parser.add_argument('--lr', type=float, default=1e-3)
+	parser.add_argument('--lr', type=float, default=5e-3)
 	parser.add_argument('--grad_clip', type=float, default=1.0)
 	parser.add_argument('--dropout', type=float, default=0.5)
 	parser.add_argument('--residual', action='store_true', default=True)
