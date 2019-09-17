@@ -96,19 +96,23 @@ class STGCN3DModel(nn.Module):
         self.st_gcn3d_modules = nn.ModuleList((
             ST_GCN3D(in_channels, 64, kernel_size, stride=1, residual=False, **kwargs0),
             ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
+            #ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
+            #ST_GCN3D(64, 64, kernel_size, stride=1, **kwargs),
             ST_GCN3D(64, 128, kernel_size, stride=2, **kwargs),
             ST_GCN3D(128, 128, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(128, 128, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(128, 256, kernel_size, stride=2, **kwargs),
-            ST_GCN3D(256, 256, kernel_size, stride=1, **kwargs),
-            ST_GCN3D(256, 256, kernel_size, stride=1, **kwargs)
+            #ST_GCN3D(128, 128, kernel_size, stride=1, **kwargs),
+            #ST_GCN3D(128, 256, kernel_size, stride=2, **kwargs),
+            #ST_GCN3D(256, 256, kernel_size, stride=1, **kwargs),
+            #ST_GCN3D(256, 256, kernel_size, stride=1, **kwargs)
         ))
 
-        self.dec = nn.LSTM(256, dec_hidden_size)
+        #self.dec = nn.LSTM(256, dec_hidden_size)
+        #if gru:
+        #    self.dec = nn.GRU(256, dec_hidden_size)
+
+        self.dec = nn.LSTM(128, dec_hidden_size)
         if gru:
-            self.dec = nn.GRU(256, dec_hidden_size)
+            self.dec = nn.GRU(128, dec_hidden_size)
 
         self.output = nn.Linear(dec_hidden_size, out_dim)
 
@@ -120,12 +124,12 @@ class STGCN3DModel(nn.Module):
         N, C, T, U, V = x.size()
         o_pred = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
 
-        x = x.permute(0, 3, 4, 1, 2).contiguous()
-        x = x.view(N, U*V*C, T)
-        data_bn = nn.BatchNorm1d(U*V*C, affine=False).to(x)
-        x = data_bn(x)
-        x = x.view(N, U, V, C, T)
-        x = x.permute(0, 3, 4, 1, 2).contiguous()
+        #x = x.permute(0, 3, 4, 1, 2).contiguous()
+        #x = x.view(N, U*V*C, T)
+        #data_bn = nn.BatchNorm1d(U*V*C, affine=False).to(x)
+        #x = data_bn(x)
+        #x = x.view(N, U, V, C, T)
+        #x = x.permute(0, 3, 4, 1, 2).contiguous()
 
         for gcn in self.st_gcn3d_modules:
             x, _ = gcn(x, A)

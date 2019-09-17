@@ -74,7 +74,6 @@ def exec_model(dataloader_train, dataloader_test, args):
 				num_batch += 1
 
 				print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
-				break
 
 		loss_epoch /= num_batch
 		print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
@@ -136,12 +135,12 @@ def main():
 	parser.add_argument('--in_channels', type=int, default=4)
 	parser.add_argument('--out_dim', type=int, default=5)
 	parser.add_argument('--spatial_kernel', type=int, default=2)
-	parser.add_argument('--temporal_kernel', type=int, default=3)
+	parser.add_argument('--temporal_kernel', type=int, default=5)
 	parser.add_argument('--dec_hidden_size', type=int, default=256)
-	parser.add_argument('--lr', type=float, default=5e-3)
+	parser.add_argument('--lr', type=float, default=3e-3)
 	parser.add_argument('--grad_clip', type=float, default=1.0)
 	parser.add_argument('--dropout', type=float, default=0.5)
-	parser.add_argument('--residual', action='store_true', default=True)
+	parser.add_argument('--residual', action='store_true', default=False)
 	parser.add_argument('--gru', action='store_true', default=True)
 	parser.add_argument('--use_cuda', action='store_true', default=True)
 	parser.add_argument('--gpu', type=int, default=3)
