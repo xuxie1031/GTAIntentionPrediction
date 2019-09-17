@@ -119,7 +119,6 @@ def convert_one_hots(sentence, nc):
 
 def convert_sentence(sentence_prob):
     seq_len, N, k = sentence_prob.size()
-    sentence_prob_np = sentence_prob.data.numpy()
 
     parsed_sentence = torch.zeros(seq_len, N, dtype=torch.long)
 
@@ -167,7 +166,7 @@ def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=No
 
     feature_seq = []
     for i in range(seq_len):
-	A = torch.sum(As_seq[i], 1)
+        A = torch.sum(As_seq[i], 1)
         _, mu, _ = s_gae(data[i], A)
         mu = mu.permute(0, 2, 1).contiguous()
         mu = mu.mean(-1)
