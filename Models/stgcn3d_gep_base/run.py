@@ -62,11 +62,11 @@ def exec_model(dataloader_train, dataloader_test, args):
 
         print('****** Training beginning ******')
         loss_epoch_p, loss_epoch_c = 0.0, 0.0
+        num_batch = 0
 
         for batch in dataloader_train:
             input_data_list, pred_data_list, _, num_node_list = batch
 
-            num_batch = 0
             num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_node_list)
             for num in num2input_dict.keys():
                 t_start = time.time()
@@ -158,11 +158,11 @@ def exec_model(dataloader_train, dataloader_test, args):
         stgcn_gep.eval()
         print('****** Testing beginning ******')
         err_epoch = 0.0
+        num_batch = 0
 
         for batch in dataloader_test:
             input_data_list, pred_data_list, _, num_node_list = batch
-
-            num_batch = 0
+            
             num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_node_list)
             for num in num2input_dict.keys():
                 t_start = time.time()

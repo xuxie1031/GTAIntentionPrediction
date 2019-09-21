@@ -139,7 +139,7 @@ def convert_sentence(sentence_prob):
     return parsed_sentence, history, curr_l
 
 
-def gep_convert_sentence(sentence_prob):
+def gep_convert_sentence(sentence_prob, grammar_gep):
     seq_len, N, k = sentence_prob.size()
     sentence_prob_np = sentence_prob.data.numpy()
 

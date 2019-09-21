@@ -101,11 +101,19 @@ class STGCN3DGEPModel(nn.Module):
 
     def forward(self, x, A, one_hots_c_obs_seq):
         N, _, _, _, V = x.size()
-        pred_outs = torch.zeros(self.pred_len, N, V, self.out_dim).to(self.device)
+        pred_outs = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
 
         x = self.emb(x, one_hots_c_obs_seq)
 
         x = self.stgcn(x, A)
 
-        N, V, C = x.size()
-        
+        N, V, _ = x.size()
+        x = x.unsqueeze(1)
+        x = x.repeat(1, self.pred_len, 1, 1)
+
+        for num in range(N):
+            h, _ = self.dec(x)
+            out = self.predictor(h)
+            pred_outs[num] = out
+
+        return pred_outs
