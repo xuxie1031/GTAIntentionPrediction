@@ -115,7 +115,7 @@ class STGCN3DGEPModel(nn.Module):
         x = x.repeat(1, self.pred_len, 1, 1)
 
         for num in range(N):
-            h, _ = self.dec(x)
+            h, _ = self.dec(x[num])
             out = self.predictor(h)
             pred_outs[num] = out
 
