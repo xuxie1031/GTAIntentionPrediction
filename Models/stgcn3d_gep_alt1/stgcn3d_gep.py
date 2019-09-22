@@ -46,7 +46,10 @@ class EmbedLayer(nn.Module):
 
 class PredictionLayer(nn.Module):
     def __init__(self, h_dim, e_h_dim, out_dim=5, activation='relu', batch_norm=True, dropout=0.0):
-        self.enc_h = make_mlp([h_dim, e_h_dim], activation=activation, batch_norm=batch_norm, dropout=dropout)
+        super(PredictionLayer, self).__init__()
+
+        # self.enc_h = make_mlp([h_dim, e_h_dim], activation=activation, batch_norm=batch_norm, dropout=dropout)
+        self.enc_h = nn.Linear(h_dim, e_h_dim)
 
         self.out = nn.Linear(e_h_dim, out_dim)
 

@@ -123,7 +123,7 @@ def exec_model(dataloader_train, dataloader_test, args):
         loss_epoch /= num_batch
         print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
 
-        stgcn_gepq.eval()
+        stgcn_gep.eval()
         print('****** Testing beginning ******')
         err_epoch = 0.0
         num_batch = 0
