@@ -114,7 +114,7 @@ def cluster_prob(batch_feature, cluster_obj, nc, eps=1e-6):
         batch_prob.append(prob)
     
     return np.stack(batch_prob)
-    
+
 
 def convert_one_hots(sentence, nc):
     seq_len, N = sentence.size()
@@ -190,6 +190,22 @@ def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=No
     sentence_prob = np.stack(sentence_prob)
 
     return torch.from_numpy(sentence_prob)
+
+
+def make_mlp(dim_list, activation='relu', batch_norm=True, dropout=0):
+    layers = []
+    for dim_in, dim_out in zip(dim_list[:-1], dim_list[1:]):
+        layers.append(nn.Linear(dim_in, dim_out))
+        if batch_norm:
+            layers.append(nn.BatchNorm1d(dim_out))
+        if activation == 'relu':
+            layers.append(nn.ReLU())
+        elif activation == 'leakyrelu':
+            layers.append(nn.LeakyReLU())
+        if dropout > 0:
+            layers.append(nn.Dropout(p=dropout))
+    
+    return nn.Sequential(*layers)
 
 
 def output_activation(x):
