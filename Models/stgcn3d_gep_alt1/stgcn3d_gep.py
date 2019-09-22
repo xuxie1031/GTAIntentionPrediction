@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from st_gcn3d import *
 from utils import *
 
-class EmbedLayer(nn.Moudle):
+class EmbedLayer(nn.Module):
     def __init__(self, emb_dim, in_channels=4, nc=3, kernel_size=1, stride=1, batch_norm=False):
         super(EmbedLayer, self).__init__()
 

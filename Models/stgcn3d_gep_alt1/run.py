@@ -217,7 +217,7 @@ def main():
     parser.add_argument('--pretrain_epochs', type=int, default=0)
     parser.add_argument('--saved_name', type=str, default='NGSIM_GAEC3_GEP.pth.tar')
 
-     args = parser.parse_args()
+    args = parser.parse_args()
 
     _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
     _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))

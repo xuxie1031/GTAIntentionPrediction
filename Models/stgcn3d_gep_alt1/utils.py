@@ -102,6 +102,20 @@ def data_revert(batch_data_seq, first_value_dicts):
     return torch.stack(batch_reverted_seq)
 
 
+def cluster_prob(batch_feature, cluster_obj, nc, eps=1e-6):
+    cluster_cs = cluster_obj.cluster_centers_
+
+    batch_prob = []
+    for feature in batch_feature:
+        dists = np.linalg.norm(cluster_cs-feature, axis=1)
+        inv_dists = 1.0/(dists+eps)
+        # prob = np.exp(1.0/(dists+eps))/np.sum(np.exp(1.0/(dists+eps)))
+        prob = inv_dists/np.sum(inv_dists)
+        batch_prob.append(prob)
+    
+    return np.stack(batch_prob)
+    
+
 def convert_one_hots(sentence, nc):
     seq_len, N = sentence.size()
     one_hots = torch.zeros(N, seq_len, nc)
