@@ -83,21 +83,18 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As_seq = torch.stack(As_seq)
                 As = As_seq[0]
 
-                obs_sentence_prob = obs_parse(batch_data, args.obs_len+args.pred_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
-                if args.use_grammar:
-                    obs_sentence = gep_convert_sentence(obs_sentence_prob, grammar_gep)
-                else:
-                    obs_sentence, _, _ = convert_sentence(obs_sentence_prob)
-                one_hots_obs_seq = convert_one_hots(obs_sentence[:(args.obs_len-1)], args.nc)
-                one_hots = data_feeder_onehots(one_hots_obs_seq, num)
+                obs_sentence_prob = obs_parse(batch_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
+                obs_sentence = gep_convert_sentence(obs_sentence_prob, grammar_gep)
+                pred_sentence = gep_pred_parse(obs_sentence, args.pred_len, grammar_gep)
+                one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
                     batch_pred_data = batch_pred_data.to(dev)
                     As = As.to(dev)
-                    one_hots = one_hots.to(dev)
-                
-                pred_outs = stgcn_gep(inputs, As, one_hots)
+                    one_hots_pred_seq = one_hots_pred_seq.to(dev)
+
+                pred_outs = stgcn_gep(inputs, As, one_hots_pred_seq)
 
                 loss = 0.0
                 for i in range(len(pred_outs)):
@@ -149,20 +146,17 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As = As_seq[0]
 
                 obs_sentence_prob = obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
-                if args.use_grammar:
-                    obs_sentence = gep_convert_sentence(obs_sentence_prob, grammar_gep)
-                else:
-                    obs_sentence, _, _ = convert_sentence(obs_sentence_prob)
-                one_hots_obs_seq = convert_one_hots(obs_sentence, args.nc)
-                one_hots = data_feeder_onehots(one_hots_obs_seq, num)
+                obs_sentence = gep_convert_sentence(obs_sentence_prob, grammar_gep)
+                pred_sentence = gep_pred_parse(obs_sentence, args.pred_len, grammar_gep)
+                one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
                     batch_pred_data = batch_pred_data.to(dev)
                     As = As.to(dev)
-                    one_hots = one_hots.to(dev)
-                
-                pred_outs = stgcn_gep(inputs, As, one_hots)
+                    one_hots_pred_seq = one_hots_pred_seq.to(dev)
+
+                pred_outs = stgcn_gep(inputs, As, one_hots_pred_seq)
 
                 pred_rets = data_revert(pred_outs, first_value_dicts)
                 pred_rets = pred_rets[:, :, :, :2]
@@ -196,17 +190,15 @@ def main():
     parser.add_argument('--nc', type=int, default=3)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
     parser.add_argument('--temporal_kernel_size', type=int, default=3)
-    parser.add_argument('--emb_kernel_size', type=int, default=1)
-    parser.add_argument('--emb_dim', type=int, default=16)
+    parser.add_argument('--onehots_emb_dim', type=int, default=128)
     parser.add_argument('--cell_input_dim', type=int, default=128)
-    parser.add_argument('--cell_h_dim', type=int, default=128)
+    parser.add_argument('--cell_h_dim', type=int, default=256)
     parser.add_argument('--e_h_dim', type=int, default=256)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--grad_clip', type=float, default=1.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--residual', action='store_true', default=True)
     parser.add_argument('--gru', action='store_true', default=True)
-    parser.add_argument('--use_grammar', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
