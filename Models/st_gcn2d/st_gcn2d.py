@@ -121,12 +121,12 @@ class STGCN2DModel(nn.Module):
         N, C, T, V = x.size()
         o_pred = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
 
-        x = x.permute(0, 3, 1, 2).contiguous()
-        x = x.view(N, V*C, T)
-        data_bn = nn.BatchNorm1d(V*C, affine=False)
-        x = data_bn(x)
-        x = x.view(N, V, C, T)
-        x = x.permute(0, 2, 3, 1).contiguous()
+        # x = x.permute(0, 3, 1, 2).contiguous()
+        # x = x.view(N, V*C, T)
+        # data_bn = nn.BatchNorm1d(V*C, affine=False)
+        # x = data_bn(x)
+        # x = x.view(N, V, C, T)
+        # x = x.permute(0, 2, 3, 1).contiguous()
 
         for gcn in self.st_gcn2d_modules:
             x, _ = gcn(x, A)

@@ -111,7 +111,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 				error = 0.0
 				for i in range(len(pred_rets)):
 					error += displacement_error(pred_rets[i], batch_pred_data[i, :, :, :2])
-				err_batch += error.item() / batch_size
+				err_batch = error.item() / batch_size
 				
 				t_end = time.time()
 				err_epoch += err_batch

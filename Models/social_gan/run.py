@@ -9,8 +9,9 @@ from utils import *
 
 import os
 import sys
-sys.path.append(os.path.join(os.getcwd(), '..', '..'))
-from DataSet import *
+sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
+from trajectories import *
+from loader import *
 
 
 def evaluate(args, batch, generator):
@@ -199,6 +200,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     optimizer_g = optim.Adam(generator.parameters(), lr=args.lr_g)
     optimizer_d = optim.Adam(discriminator.parameters(), lr=args.lr_d)
 
+    err_epochs = []
     for epoch in range(args.num_epochs):
         print('****** Training beginning ******')
         d_steps_left = args.steps_d
@@ -231,10 +233,14 @@ def exec_model(dataloader_train, dataloader_test, args):
         for batch in dataloader_test:
             err_batch = evaluate(args, batch, generator)
             num_batch += 1
+            err_epoch += err_batch
 
             print('test epoch {}, batch {}, error batch = {:.6f}'.format(epoch, num_batch, err_batch))
         
         err_epoch /= dataloader_test.batch_size
+        err_epochs.append(err_epoch)
+        print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
+        print(err_epochs)
 
         d_steps_left = args.steps_d
         g_steps_left = args.steps_g

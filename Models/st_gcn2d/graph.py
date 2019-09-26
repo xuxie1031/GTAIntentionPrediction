@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 
 class Graph:
     # batch_templates size: (N, V, 4), 4 dims are: x, y, vx, vy
@@ -26,8 +26,7 @@ class Graph:
                     xi, yi, vxi, vyi = batch_templates[num, i]
                     xj, yj, vxj, vyj = batch_templates[num, j]
                     a, b, c, d = (xi-xj), (yi-yj), (vxi-vxj), (vyi-vyj)
-                    tmin = -(a*c+b*d)/(c**2+d**2)
-                    tmin = np.ceil(tmin.item())
+                    tmin = -(a*c+b*d)/(c**2+d**2).ceil().item()
                     self.A[num, 1, i, j] = 1.0 / tmin if tmin > 0.0 else 0.0
                     self.A[num, 1, j, i] = self.A[num, 1, i, j]
     
