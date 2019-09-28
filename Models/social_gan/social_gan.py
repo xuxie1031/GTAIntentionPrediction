@@ -111,11 +111,12 @@ class TrajectoryGenerator(nn.Module):
     def __init__(self, obs_len, pred_len, input_dim, embedding_dim=64, encoder_h_dim=64,
                  decoder_h_dim=128, mlp_dim=1024, num_layers=1, noise_dim=(0, ),
                  dropout=0.0, bottleneck_dim=1024, activation='relu', batch_norm=True,
-                 use_cuda=True
+                 use_cuda=True, device=None
     ):
         super(TrajectoryGenerator, self).__init__()
 
         self.use_cuda = use_cuda
+        self.device = device
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.input_dim = input_dim
@@ -182,7 +183,7 @@ class TrajectoryGenerator(nn.Module):
             )
 
         if self.use_cuda:
-            self.to(torch.device('cuda:0'))
+            self.to(device)
 
 
     def add_noise(self, input):
@@ -231,11 +232,13 @@ class TrajectoryGenerator(nn.Module):
 class TrajectoryDiscriminator(nn.Module):
     def __init__(self, obs_len, pred_len, input_dim, embedding_dim=64, h_dim=64, mlp_dim=1024,
                  num_layers=1, activation='relu', batch_norm=True, dropout=0.0, use_cuda=True,
+                 device=None,
                  d_type='local'
     ):
         super(TrajectoryDiscriminator, self).__init__()
 
         self.use_cuda = use_cuda
+        self.device = device
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.seq_len = obs_len+pred_len
@@ -275,7 +278,7 @@ class TrajectoryDiscriminator(nn.Module):
             )
 
         if self.use_cuda:
-            self.to(torch.device('cuda:0'))
+            self.to(device)
 
     
     def forward(self, traj, traj_rel, num_nodes):

@@ -42,11 +42,13 @@ def evaluate(args, batch, generator):
                 rel_pred_fake = generator_out
                 pred_fake = rel2abs(rel_pred_fake, input_data[-1])
 
-                veh_pred_fake, _ = veh_ped_seperate(pred_fake, ids)
-                veh_pred_data, _ = veh_ped_seperate(pred_data, ids)
+                # veh_pred_fake, _ = veh_ped_seperate(pred_fake, ids)
+                # veh_pred_data, _ = veh_ped_seperate(pred_data, ids)
 
                 # error = displacement_error(veh_pred_fake, veh_pred_data)
-                error = final_displacement_error(veh_pred_fake, veh_pred_data)
+                # error = final_displacement_error(veh_pred_fake, veh_pred_data)
+
+                error = displacement_error(pred_fake, pred_data)
                 err_samples += error.item()
             
             err_samples /= args.num_samples
@@ -58,13 +60,11 @@ def evaluate(args, batch, generator):
         
 
 
-def discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimizer_d):
+def discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimizer_d, device):
     input_data_list, pred_data_list, _, num_nodes_list = batch
     
     loss_batch_d = 0
-    loss = torch.zeros(1)
-    if args.use_cuda:
-        loss = loss.cuda()
+    loss = torch.zeros(1).to(device)
 
     for idx in range(len(input_data_list)):
         input_data = input_data_list[idx]
@@ -106,13 +106,11 @@ def discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimiz
     return loss_batch_d
 
 
-def generator_step(args, batch, generator, discriminator, g_loss_fn, optimizer_g):
+def generator_step(args, batch, generator, discriminator, g_loss_fn, optimizer_g, device):
     input_data_list, pred_data_list, _, num_nodes_list = batch
 
     loss_batch_g = 0
-    loss = torch.zeros(1)
-    if args.use_cuda:
-        loss = loss.cuda()
+    loss = torch.zeros(1).to(device)
 
     for idx in range(len(input_data_list)):
         input_data = input_data_list[idx]
@@ -163,6 +161,10 @@ def generator_step(args, batch, generator, discriminator, g_loss_fn, optimizer_g
 
 
 def exec_model(dataloader_train, dataloader_test, args):
+    dev = torch.device('cpu')
+    if args.use_cuda:
+        dev = torch.device('cuda:'+str(args.gpu))
+
     generator = TrajectoryGenerator(
         obs_len=args.obs_len,
         pred_len=args.pred_len,
@@ -176,7 +178,8 @@ def exec_model(dataloader_train, dataloader_test, args):
         dropout=args.dropout,
         bottleneck_dim=args.bottleneck_dim,
         batch_norm=args.batch_norm,
-        use_cuda=args.use_cuda
+        use_cuda=args.use_cuda,
+        device=dev
     )
     generator.apply(init_weights)
     
@@ -190,7 +193,8 @@ def exec_model(dataloader_train, dataloader_test, args):
         num_layers=args.num_layers,
         dropout=args.dropout,
         batch_norm=args.batch_norm,
-        use_cuda=args.use_cuda
+        use_cuda=args.use_cuda,
+        device=dev
     )
     discriminator.apply(init_weights)
 
@@ -212,11 +216,11 @@ def exec_model(dataloader_train, dataloader_test, args):
             loss_batch_d = 0
 
             if d_steps_left > 0:
-                loss_batch_d = discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimizer_d)
+                loss_batch_d = discriminator_step(args, batch, generator, discriminator, d_loss_fn, optimizer_d, dev)
                 print('train epoch {}, batch {}, loss d = {:.6f}'.format(epoch, num_batch, loss_batch_d/dataloader_train.batch_size))
                 d_steps_left -= 1
             elif g_steps_left > 0:
-                loss_batch_g = generator_step(args, batch, generator, discriminator, g_loss_fn, optimizer_g)
+                loss_batch_g = generator_step(args, batch, generator, discriminator, g_loss_fn, optimizer_g, dev)
                 print('train epoch {}, batch {}, loss g = {:.6f}'.format(epoch, num_batch, loss_batch_g/dataloader_train.batch_size))
                 g_steps_left -= 1
             num_batch += 1
@@ -279,12 +283,34 @@ def main():
     parser.add_argument('--best_k', type=int, default=5)
     parser.add_argument('--num_samples', type=int, default=1)
 
-    parser.add_argument('--use_cuda', type=int, default=1)
+    parser.add_argument('--use_cuda', action='store_true', default=True)
+    parser.add_argument('--gpu', type=int, default=0)
+
+    parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
+    parser.add_argument('--dset_tag', type=str, default='')
+    parser.add_argument('--dset_feature', type=int, default=4)
+    parser.add_argument('--frame_skip', type=int, default=2)
 
     args = parser.parse_args()
 
-    _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'train'))
-    _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', 'test'))
+    loader_name = args.dset_name+'_loader.pth.tar'
+    if os.path.exists(loader_name):
+        assert os.path.isfile(loader_name)
+        state = torch.load(loader_name)
+        
+        train_loader = state['train']
+        test_loader = state['test']
+    else:
+        _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
+        _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+        
+        state = {}
+        state['train'] = train_loader
+        state['test'] = test_loader
+        torch.save(state, loader_name)
+
+    print(len(train_loader))
+    print(len(test_loader))
 
     exec_model(train_loader, test_loader, args)
 

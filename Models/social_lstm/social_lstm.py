@@ -3,10 +3,11 @@ import torch.nn as nn
 import numpy as np
 
 class SocialLSTM(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, device=None):
         super(SocialLSTM, self).__init__()
 
         self.use_cuda = args.use_cuda
+        self.device = device
         self.hidden_size = args.hidden_size
         self.grid_size = args.grid_size
         self.embedding_size = args.embedding_size
@@ -26,15 +27,13 @@ class SocialLSTM(nn.Module):
         self.dropout = nn.Dropout(args.dropout)
 
         if self.use_cuda:
-            self.to(torch.device('cuda:0'))
+            self.to(device)
 
 
     def getSocialTensor(self, grid, hidden_states):
         num_nodes = grid.size()[0]
 
-        social_tensor = torch.zeros(num_nodes, self.grid_size*self.grid_size, self.hidden_size)
-        if self.use_cuda:
-            social_tensor = social_tensor.cuda()
+        social_tensor = torch.zeros(num_nodes, self.grid_size*self.grid_size, self.hidden_size).to(self.device)
 
         for node in range(num_nodes):
             social_tensor[node] = torch.mm(torch.t(grid[node]), hidden_states)
@@ -51,9 +50,7 @@ class SocialLSTM(nn.Module):
         seq_len = args[4]
         num_nodes = args[5]
 
-        outputs = torch.zeros(seq_len*num_nodes, self.output_size)
-        if self.use_cuda:
-            outputs = outputs.cuda()
+        outputs = torch.zeros(seq_len*num_nodes, self.output_size).to(self.device)
 
         for framenum in range(len(input_data)):
             nodes_current = input_data[framenum]

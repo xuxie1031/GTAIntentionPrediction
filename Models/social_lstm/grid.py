@@ -34,12 +34,12 @@ def get_grid_mask(frame, num_nodes, neighbor_size, grid_size, units=(1.0, 1.0)):
     return frame_mask
 
 
-def get_grid_mask_seq(frames, neighbor_size, grid_size, use_cuda, units=(1.0, 1.0)):
+def get_grid_mask_seq(frames, neighbor_size, grid_size, use_cuda, units=(1.0, 1.0), device=None):
     mask_seq = []
     for i in range(len(frames)):
         mask = torch.from_numpy(get_grid_mask(frames[i], len(frames[i]), neighbor_size, grid_size, units)).float()
         if use_cuda:
-            mask = mask.cuda()
+            mask = mask.to(device)
         mask_seq.append(mask)
     
     return mask_seq
