@@ -7,6 +7,14 @@ from sklearn.cluster import KMeans
 
 import collections
 
+import os
+import json
+
+import sys
+sys.path.append(os.path.join(os.getcwd(), '..', 'grammar', 'src'))
+from grammarutils import *
+from GEP import GeneralizedEarley as GEP
+
 class WriteOnceDict(dict):
 	def __setitem__(self, key, value):
 		if not key in self:
@@ -116,6 +124,17 @@ def convert_one_hots(sentence, nc):
     return one_hots
 
 
+def gep_init(args):
+    grammar_file = os.path.join(args.grammar_root, args.grammar_file)
+    duration_file = os.path.join(args.grammar_root, args.grammar_prior)
+
+    parser = get_parser(grammar_file, args.nc)
+    with open(duration_file, 'r') as f:
+        duration_prior = json.load(f)
+
+    return parser, duration_prior
+
+
 def gep_convert_sentence(sentence_prob, grammar_gep):
     seq_len, N, k = sentence_prob.size()
     sentence_prob_np = sentence_prob.data.numpy()
@@ -130,6 +149,36 @@ def gep_convert_sentence(sentence_prob, grammar_gep):
             parsed_sentence[i, num] = sentence_seq[-1]
 
     return parsed_sentence
+
+
+def gep_pred_parse(obs_sentence, pred_len, duration_prior, parser, args):
+    predictions = np.zeros((pred_len, obs_sentence.shape[1]))
+    best_parse, prob = parser.parse(obs_sentence)
+    tokens = best_parse.split()
+    current_token = tokens[-1]
+    current_duration = 0
+    # TODO: switch this to be operated on the classifier output
+    while tokens[:-1-current_duration] == current_token:
+        current_duration += 1
+    mu, sigma = duration_prior[current_token]
+    current_duration = min(pred_len, max(0, int(mu) - current_duration))
+    pred_len -= current_duration
+    predictions[:current_duration, int(current_token)] = 1
+    sequence = obs_sentence
+    while pred_len> 0:
+        prob = np.ones((current_duration, obs_sentence.shape[1])) * args.grammar_epsilon
+        prob[:, int(current_token)] = 1.0
+        prob /= sum(prob[0, :])
+        sequence = np.vstack((sequence, prob))
+        _, _ = parser.parse(sequence)
+        predict_prob = parser.future_predict(args.grammar_epsilon)
+        current_token = np.argmax(predict_prob, axis=-1)
+        mu, sigma = duration_prior[str(current_token)]
+        new_duration = min(pred_len, int(mu))
+        predictions[current_duration : current_duration + new_duration, int(current_token)] = 1
+        current_duration += new_duration
+        pred_len -= new_duration
+    return predictions    
 
 
 def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=None):
@@ -156,7 +205,8 @@ def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=No
         sentence_prob.append(batch_prob)
     sentence_prob = np.stack(sentence_prob)
 
-    return torch.from_numpy(sentence_prob)
+    # return torch.from_numpy(sentence_prob)
+    return sentence_prob
 
 
 def make_mlp(dim_list, activation='relu', batch_norm=True, dropout=0):

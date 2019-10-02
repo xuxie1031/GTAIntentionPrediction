@@ -37,15 +37,13 @@ def exec_model(dataloader_train, dataloader_test, args):
         state = torch.load(os.path.join('..', 'cluster', 'saved_models', 'Cluster.pth.tar'))
         saved_state['cluster'] = state['model']
 
-        # grammar to be added
-        saved_state['grammar'] = None
-
         torch.save(saved_state, os.path.join('models', args.saved_name))
 
     state = torch.load(os.path.join('models', args.saved_name))
     s_gae = state['sgae']
     cluster_obj = state['cluster']
-    grammar_gep = state['grammar']
+    
+    parser, duration_prior = gep_init(args)
 
     optimizer = optim.Adam(stgcn_gep.parameters(), lr=args.lr)
 
@@ -84,8 +82,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As = As_seq[0]
 
                 obs_sentence_prob = obs_parse(batch_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
-                obs_sentence = gep_convert_sentence(obs_sentence_prob, grammar_gep)
-                pred_sentence = gep_pred_parse(obs_sentence, args.pred_len, grammar_gep)
+                pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, parser, args)
                 one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
 
                 if args.use_cuda:
@@ -146,8 +143,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 As = As_seq[0]
 
                 obs_sentence_prob = obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
-                obs_sentence = gep_convert_sentence(obs_sentence_prob, grammar_gep)
-                pred_sentence = gep_pred_parse(obs_sentence, args.pred_len, grammar_gep)
+                pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, parser, args)
                 one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
 
                 if args.use_cuda:
@@ -201,6 +197,10 @@ def main():
     parser.add_argument('--gru', action='store_true', default=True)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--grammar_root', type=str, default='../grammar')
+    parser.add_argument('--grammar_file', type=str, default='tmp/grammar/NGSIM.pcfg')
+    parser.add_argument('--grammar_prior', type=str, default='tmp/NGSIM_duration_prior.json')
+    parser.add_argument('--grammar_epsilon', type=float, default=1e-10)
     parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
     parser.add_argument('--dset_tag', type=str, default='')
     parser.add_argument('--dset_feature', type=int, default=4)
