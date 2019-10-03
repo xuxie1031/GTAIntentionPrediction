@@ -15,7 +15,8 @@ class DroneDataset():
         self.dset_path = dset_path
         self.save_path = save_path
         self.base_path = 'annotations'
-        self.categories = {'bookstore':7, 'coupa':4, 'deathCircle':5, 'gates':9, 'hyang':15, 'little':4, 'nexus':12, 'quad':4}
+        #self.categories = {'bookstore':7, 'coupa':4, 'deathCircle':5, 'gates':9, 'hyang':15, 'little':4, 'nexus':12, 'quad':4}
+        self.categories = {'deathCircle':1}
         self.files = []
 
 
@@ -59,6 +60,8 @@ class DroneDataset():
 
 
     def data_save(self, converted_data):
+        #converted_data = converted_data[:converted_data.shape[0]//10, :]
+
         bound = int(converted_data.shape[0]*0.7)
         train_data = converted_data[:bound, :]
         test_data = converted_data[bound:, :]
@@ -137,6 +140,8 @@ class NGSIMDataset():
 
     
     def data_save(self, converted_data):
+        converted_data = converted_data[:converted_data.shape[0]//20, :]
+
         bound = int(converted_data.shape[0]*0.7)
         train_data = converted_data[:bound, :]
         test_data = converted_data[bound:, :]
@@ -247,5 +252,6 @@ class GTADataset():
 
 # start preprocess
 # pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
-pre_dset = NGSIMDataset('/mnt/Dataset/TrajDset/NGSIM', save_path='dataset')
+pre_dset = NGSIMDataset('/home/xuxie/Dataset/traj_dataset/NGSIM', save_path='dataset')
+# pre_dset = DroneDataset('/home/xuxie/Dataset/traj_dataset/Drone', save_path='dataset')
 pre_dset.pipeline()

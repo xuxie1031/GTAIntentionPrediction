@@ -83,7 +83,8 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 obs_sentence_prob = obs_parse(batch_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
                 pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, parser, args)
-                one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
+                # one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
+                one_hots_pred_seq = pred_sentence
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
@@ -144,7 +145,8 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 obs_sentence_prob = obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
                 pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, parser, args)
-                one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
+                # one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
+                one_hots_pred_seq = pred_sentence
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
@@ -198,8 +200,8 @@ def main():
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--grammar_root', type=str, default='../grammar')
-    parser.add_argument('--grammar_file', type=str, default='tmp/grammar/NGSIM.pcfg')
-    parser.add_argument('--grammar_prior', type=str, default='tmp/NGSIM_duration_prior.json')
+    parser.add_argument('--grammar_file', type=str, default='tmp/NGSIM/grammar/NGSIM_xu.pcfg')
+    parser.add_argument('--grammar_prior', type=str, default='tmp/NGSIM/NGSIM_xu_duration_prior.json')
     parser.add_argument('--grammar_epsilon', type=float, default=1e-10)
     parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
     parser.add_argument('--dset_tag', type=str, default='')

@@ -155,7 +155,7 @@ def main():
     parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
     parser.add_argument('--dset_tag', type=str, default='')
     parser.add_argument('--dset_feature', type=int, default=4)
-    parser.add_argument('--frame_skip', type=int, default=1)
+    parser.add_argument('--frame_skip', type=int, default=2)
     parser.add_argument('--num_epochs', type=int, default=3)
     parser.add_argument('--save_name', type=str, default='feature_NGSIM')
     parser.add_argument('--model_name', type=str, default='SGAE.pth.tar')

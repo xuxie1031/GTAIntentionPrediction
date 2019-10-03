@@ -128,7 +128,13 @@ def gep_init(args):
     grammar_file = os.path.join(args.grammar_root, args.grammar_file)
     duration_file = os.path.join(args.grammar_root, args.grammar_prior)
 
-    parser = get_parser(grammar_file, args.nc)
+    symbols = [str(num) for num in range(args.nc)]
+    symbol_index = dict()
+    for s in symbols:
+        symbol_index[s] = symbols.index(s)
+    grammar = read_grammar(grammar_file, index=True, mapping=symbol_index)
+    parser = GEP(grammar)
+
     with open(duration_file, 'r') as f:
         duration_prior = json.load(f)
 
@@ -151,34 +157,44 @@ def gep_convert_sentence(sentence_prob, grammar_gep):
     return parsed_sentence
 
 
-def gep_pred_parse(obs_sentence, pred_len, duration_prior, parser, args):
-    predictions = np.zeros((pred_len, obs_sentence.shape[1]))
-    best_parse, prob = parser.parse(obs_sentence)
-    tokens = best_parse.split()
-    current_token = tokens[-1]
-    current_duration = 0
-    # TODO: switch this to be operated on the classifier output
-    while tokens[:-1-current_duration] == current_token:
-        current_duration += 1
-    mu, sigma = duration_prior[current_token]
-    current_duration = min(pred_len, max(0, int(mu) - current_duration))
-    pred_len -= current_duration
-    predictions[:current_duration, int(current_token)] = 1
-    sequence = obs_sentence
-    while pred_len> 0:
-        prob = np.ones((current_duration, obs_sentence.shape[1])) * args.grammar_epsilon
-        prob[:, int(current_token)] = 1.0
-        prob /= sum(prob[0, :])
-        sequence = np.vstack((sequence, prob))
-        _, _ = parser.parse(sequence)
-        predict_prob = parser.future_predict(args.grammar_epsilon)
-        current_token = np.argmax(predict_prob, axis=-1)
-        mu, sigma = duration_prior[str(current_token)]
-        new_duration = min(pred_len, int(mu))
-        predictions[current_duration : current_duration + new_duration, int(current_token)] = 1
-        current_duration += new_duration
-        pred_len -= new_duration
-    return predictions    
+def gep_pred_parse(batch_obs_sentence, pred_len, duration_prior, parser, args):
+    obs_len, N, k = batch_obs_sentence.shape
+    batch_predictions = []
+
+    for num in range(N):
+        obs_sentence = batch_obs_sentence[:, num, :]
+        predictions = np.zeros((pred_len, k), dtype=np.float32)
+
+        best_parse, prob = parser.parse(obs_sentence)
+        tokens = best_parse.split()
+        current_token = tokens[-1]
+        current_duration = 0
+        # TODO: switch this to be operated on the classifier output
+        while tokens[:-1-current_duration] == current_token:
+            current_duration += 1
+        mu, sigma = duration_prior[current_token]
+        current_duration = min(pred_len, max(0, int(mu) - current_duration))
+        pred_len -= current_duration
+        predictions[:current_duration, int(current_token)] = 1
+        sequence = obs_sentence
+        while pred_len> 0:
+            prob = np.ones((current_duration, obs_sentence.shape[1])) * args.grammar_epsilon
+            prob[:, int(current_token)] = 1.0
+            prob /= sum(prob[0, :])
+            sequence = np.vstack((sequence, prob))
+            _, _ = parser.parse(sequence)
+            predict_prob = parser.future_predict(args.grammar_epsilon)
+            current_token = np.argmax(predict_prob, axis=-1)
+            mu, sigma = duration_prior[str(current_token)]
+            new_duration = min(pred_len, int(mu))
+            predictions[current_duration : current_duration + new_duration, int(current_token)] = 1
+            current_duration += new_duration
+            pred_len -= new_duration
+
+        batch_predictions.append(predictions)
+        pred_len = args.pred_len
+
+    return torch.from_numpy(np.stack(batch_predictions))
 
 
 def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=None):

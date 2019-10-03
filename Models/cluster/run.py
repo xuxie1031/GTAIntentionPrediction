@@ -33,7 +33,7 @@ def exec_model(args):
     for l_traj in labels:
         print(l_traj)
 
-    np.savetxt(args.save_name, labels, delimiter=',')
+    np.savetxt(args.save_name, labels, fmt='%d', delimiter=',')
 
     print('****** saving model ******')
     if not os.path.exists('saved_models'): os.makedirs('saved_models')
@@ -48,8 +48,8 @@ def main():
 
     parser.add_argument('--k', type=int, default=3)
     parser.add_argument('--path_name', type=str, default='saved_features')
-    parser.add_argument('--file_name', type=str, default='feature_GTAS')
-    parser.add_argument('--save_name', type=str, default='sentences_GTAS')
+    parser.add_argument('--file_name', type=str, default='feature_NGSIM')
+    parser.add_argument('--save_name', type=str, default='sentences_NGSIM')
     parser.add_argument('--model_name', type=str, default='Cluster.pth.tar')
 
     args = parser.parse_args()

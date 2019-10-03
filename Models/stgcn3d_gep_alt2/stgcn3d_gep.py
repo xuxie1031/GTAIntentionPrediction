@@ -34,7 +34,7 @@ class STGCN3DGEPModel(nn.Module):
 		self.out_dim = args.out_dim
 		self.nc = args.nc
 		self.gru = args.gru
-		self.device = args.device
+		self.device = device
 
 		self.stgcn = STGCN3DModule(
 			args.in_channels,
