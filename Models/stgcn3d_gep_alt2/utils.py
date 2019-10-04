@@ -33,6 +33,17 @@ def data_feeder(batch_data):
     return data
 
 
+def data_feeder_onehots(batch_onehots, V):
+    N, T, C = batch_onehots.size()
+    data = torch.zeros(N, T, V, C)
+    for num in range(N):
+        for i in range(T):
+            data[num, i, :] = batch_onehots[num, i]
+    data = data.permute(0, 3, 1, 2).contiguous()
+
+    return data
+
+
 def data_feeder_gae(batch_data):
     N, T, V, _ = batch_data.size()
     data = torch.zeros(N, T, V, V, 4).to(batch_data)
@@ -171,7 +182,7 @@ def gep_pred_parse(batch_obs_sentence, pred_len, duration_prior, parser, args):
         tokens = best_parse.split()
         current_token = tokens[-1]
         current_duration = 0
-        while labels[-1-current_duration] == int(current_token) and current_duration < len(labels):
+        while current_duration < len(labels) and labels[-1-current_duration] == int(current_token):
             current_duration += 1
         mu, sigma = duration_prior[current_token]
         new_duration = min(pred_len, max(0, int(mu)-current_duration))

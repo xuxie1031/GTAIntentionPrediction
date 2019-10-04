@@ -146,7 +146,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 obs_sentence_prob = obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
                 pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, parser, args)
                 # one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
-                one_hots_pred_seq = pred_sentence
+                
+                # one_hots_pred_seq = pred_sentence
+                one_hots_pred_seq = data_feeder_onehots(pred_sentence)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)

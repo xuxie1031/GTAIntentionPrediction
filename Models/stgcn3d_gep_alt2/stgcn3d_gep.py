@@ -5,6 +5,38 @@ import torch.nn.functional as F
 from st_gcn3d import *
 from utils import *
 
+class PredEmbedLayer(nn.Module):
+	def __init__(self, emb_dim, nc=3, kernel_size=1, stride=1, batch_norm=False):
+		super(PredEmbedLayer, self).__init__()
+
+		assert kernel_size % 2 == 1
+		padding = ((kernel_size-1) // 2, 0)
+
+		self.cell_in_emb = nn.Identity()
+
+		self.onehots_emb = nn.Conv2d(
+			nc,
+			emb_dim,
+			(kernel_size, 1),
+			(stride, 1),
+			padding
+		)
+
+		self.bn = None
+		if batch_norm: self.bn = nn.BatchNorm2d(emb_dim)
+
+	
+	def forward(self, x, onehots):
+		x = self.cell_in_emb(x)
+
+		onehots = self.onehots_emb(onehots)
+		onehots = onehots if self.bn is None else self.bn(onehots)
+
+		onehots = onehots.permute(0, 2, 3, 1).contiguous()
+		x = torch.cat([x, onehots], dim=3)
+
+		return x
+
 
 class PredictionLayer(nn.Module):
 	def __init__(self, h_dim, e_h_dim, out_dim=5, activation='relu', batch_norm=True, dropout=0.0):
@@ -45,12 +77,18 @@ class STGCN3DGEPModel(nn.Module):
 			residual=args.residual
 		)
 
-		self.onehots_emb = nn.Linear(args.nc, args.onehots_emb_dim)
+		# self.onehots_emb = nn.Linear(args.nc, args.onehots_emb_dim)
 
 		self.dec = nn.LSTM(args.cell_input_dim+args.onehots_emb_dim, args.cell_h_dim)
 		if args.gru:
 			self.dec = nn.GRU(args.cell_input_dim+args.onehots_emb_dim, args.cell_h_dim)
 		
+		self.pred_emb = PredEmbedLayer(
+			emb_dim=args.onehots_emb_dim,
+			nc=args.nc,
+			kernel_size=1
+		)
+
 		self.predictor = PredictionLayer(
 			h_dim=args.cell_h_dim,
 			e_h_dim=args.e_h_dim,
@@ -74,12 +112,20 @@ class STGCN3DGEPModel(nn.Module):
 		x = x.unsqueeze(1)
 		x = x.repeat(1, self.pred_len, 1, 1)
 
-		for num in range(N):
-			onehots_emb_seq = self.onehots_emb(one_hots_c_pred_seq[num])
-			onehots_emb_seq = onehots_emb_seq.unsqueeze(1)
-			onehots_emb_seq = onehots_emb_seq.repeat(1, V, 1)
+		# for num in range(N):
+		# 	onehots_emb_seq = self.onehots_emb(one_hots_c_pred_seq[num])
+		# 	onehots_emb_seq = onehots_emb_seq.unsqueeze(1)
+		# 	onehots_emb_seq = onehots_emb_seq.repeat(1, V, 1)
 
-			cell_input = torch.cat((x[num], onehots_emb_seq), dim=2)
+		# 	cell_input = torch.cat((x[num], onehots_emb_seq), dim=2)
+		# 	h, _ = self.dec(cell_input)
+		# 	out = self.predictor(h)
+		# 	pred_outs[num] = out
+
+		x = self.pred_emb(x, one_hots_c_pred_seq)
+
+		for num in range(N):
+			cell_input = x[num]
 			h, _ = self.dec(cell_input)
 			out = self.predictor(h)
 			pred_outs[num] = out

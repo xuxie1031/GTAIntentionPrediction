@@ -199,22 +199,25 @@ def gep_pred_parse(batch_obs_sentence, pred_len, duration_prior, parser, args):
         predictions = np.zeros((pred_len, k), dtype=np.float32)
 
         best_parse, prob = parser.parse(obs_sentence)
+        labels, _, _ = parser.compute_labels()
+
         tokens = best_parse.split()
         current_token = tokens[-1]
         current_duration = 0
-        # TODO: switch this to be operated on the classifier output
-        while tokens[:-1-current_duration] == current_token:
+        while current_duration < len(labels) and labels[-1-current_duration] == int(current_token):
             current_duration += 1
         mu, sigma = duration_prior[current_token]
-        current_duration = min(pred_len, max(0, int(mu) - current_duration))
-        pred_len -= current_duration
+        new_duration = min(pred_len, max(0, int(mu)-current_duration))
+        pred_len -= new_duration
+        current_duration = new_duration
         predictions[:current_duration, int(current_token)] = 1
         sequence = obs_sentence
         while pred_len> 0:
-            prob = np.ones((current_duration, obs_sentence.shape[1])) * args.grammar_epsilon
-            prob[:, int(current_token)] = 1.0
-            prob /= sum(prob[0, :])
-            sequence = np.vstack((sequence, prob))
+            if new_duration != 0:
+                prob = np.ones((new_duration, k))*args.grammar_epsilon
+                prob[:, int(current_token)] = 1.0
+                prob /= sum(prob[0, :])
+                sequence = np.vstack((sequence, prob))
             _, _ = parser.parse(sequence)
             predict_prob = parser.future_predict(args.grammar_epsilon)
             current_token = np.argmax(predict_prob, axis=-1)
