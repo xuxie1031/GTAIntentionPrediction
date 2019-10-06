@@ -86,7 +86,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 
                 # one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc)
                 # one_hots_pred_seq = pred_sentence
-                one_hots_pred_seq = data_feeder_onehots(pred_sentence)
+                one_hots_pred_seq = data_feeder_onehots(pred_sentence, num)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
@@ -150,7 +150,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 
                 # one_hots_pred_seq = convert_one_hots(pred_sentence, args.nc) 
                 # one_hots_pred_seq = pred_sentence
-                one_hots_pred_seq = data_feeder_onehots(pred_sentence)
+                one_hots_pred_seq = data_feeder_onehots(pred_sentence, num)
 
                 if args.use_cuda:
                     inputs = inputs.to(dev)
