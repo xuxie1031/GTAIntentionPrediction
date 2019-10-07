@@ -6,7 +6,7 @@ from st_gcn3d import *
 from utils import *
 
 class PredEmbedLayer(nn.Module):
-	def __init__(self, emb_dim, nc=3, kernel_size=1, stride=1, batch_norm=False):
+	def __init__(self, emb_dim, nc=3, kernel_size=1, stride=1, dropout=0.0):
 		super(PredEmbedLayer, self).__init__()
 
 		assert kernel_size % 2 == 1
@@ -14,23 +14,38 @@ class PredEmbedLayer(nn.Module):
 
 		self.cell_in_emb = nn.Identity()
 
-		self.onehots_emb = nn.Conv2d(
-			nc,
-			emb_dim,
-			(kernel_size, 1),
-			(stride, 1),
-			padding
-		)
+		# self.onehots_emb = nn.Conv2d(
+		# 	nc,
+		# 	emb_dim,
+		# 	(kernel_size, 1),
+		# 	(stride, 1),
+		# 	padding
+		# )
 
-		self.bn = None
-		if batch_norm: self.bn = nn.BatchNorm2d(emb_dim)
+		self.onehots_emb = nn.Sequential(
+			nn.Conv2d(
+				nc,
+				64,
+				(kernel_size, 1),
+				(stride, 1),
+				padding
+			),
+			nn.BatchNorm2d(64),
+			nn.Dropout(dropout, inplace=True),
+			nn.Conv2d(
+				64,
+				emb_dim,
+				(kernel_size, 1),
+				(stride, 1),
+				padding
+			)
+		)
 
 	
 	def forward(self, x, onehots):
 		x = self.cell_in_emb(x)
 
 		onehots = self.onehots_emb(onehots)
-		onehots = onehots if self.bn is None else self.bn(onehots)
 
 		onehots = onehots.permute(0, 2, 3, 1).contiguous()
 		x = torch.cat([x, onehots], dim=3)
@@ -86,7 +101,8 @@ class STGCN3DGEPModel(nn.Module):
 		self.pred_emb = PredEmbedLayer(
 			emb_dim=args.onehots_emb_dim,
 			nc=args.nc,
-			kernel_size=1
+			kernel_size=1,
+			dropout=args.dropout
 		)
 
 		self.predictor = PredictionLayer(
