@@ -33,13 +33,24 @@ def data_feeder(batch_data):
     return data
 
 
-def data_feeder_onehots(batch_onehots, V):
+def data_feeder_onehots_obs(batch_onehots, V):
     N, T, C = batch_onehots.size()
     data = torch.zeros(N, T, V, V, C)
     for num in range(N):
         for i in range(T):
             data[num, i, :, :] = batch_onehots[num, i]
     data = data.permute(0, 4, 1, 2, 3).contiguous()
+
+    return data
+
+
+def data_feeder_onehots_pred(batch_onehots, V):
+    N, T, C = batch_onehots.size()
+    data = torch.zeros(N, T, V, C)
+    for num in range(N):
+        for i in range(T):
+            data[num, i, :] = batch_onehots[num, i]
+    data = data.permute(0, 3, 1, 2).contiguous()
 
     return data
 
