@@ -252,6 +252,6 @@ class GTADataset():
 
 # start preprocess
 # pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
-pre_dset = NGSIMDataset('/home/xuxie/Dataset/traj_dataset/NGSIM', save_path='dataset')
+pre_dset = NGSIMDataset('/home/xuxie/Dataset/TrajDset/NGSIM', save_path='dataset')
 # pre_dset = DroneDataset('/home/xuxie/Dataset/traj_dataset/Drone', save_path='dataset')
 pre_dset.pipeline()

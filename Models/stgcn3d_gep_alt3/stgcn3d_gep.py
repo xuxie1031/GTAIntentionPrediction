@@ -121,9 +121,9 @@ class STGCN3DGEPModel(nn.Module):
             residual=args.residual
         )
 
-        self.dec = nn.LSTM(args.cell_input_dim, args.cell_h_dim)
+        self.dec = nn.LSTM(args.cell_input_dim+args.onehots_emb_dim, args.cell_h_dim)
         if args.gru:
-            self.dec = nn.GRU(args.cell_input_dim, args.cell_h_dim)
+            self.dec = nn.GRU(args.cell_input_dim+args.onehots_emb_dim, args.cell_h_dim)
 
         self.pred_emb = PredEmbedLayer(
 			emb_dim=args.onehots_emb_dim,

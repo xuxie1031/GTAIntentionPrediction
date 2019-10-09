@@ -202,6 +202,7 @@ def gep_convert_sentence(sentence_prob, grammar_gep):
 
 
 def gep_pred_parse(batch_obs_sentence, pred_len, duration_prior, parser, args):
+    batch_obs_sentence = batch_obs_sentence.data.numpy()
     obs_len, N, k = batch_obs_sentence.shape
     batch_predictions = []
 
@@ -268,8 +269,8 @@ def obs_parse(batch_data_seq, seq_len, s_gae, As_seq, cluster_obj, nc, device=No
         sentence_prob.append(batch_prob)
     sentence_prob = np.stack(sentence_prob)
 
-    # return torch.from_numpy(sentence_prob)
-    return sentence_prob
+    return torch.from_numpy(sentence_prob)
+    # return sentence_prob
 
 
 def make_mlp(dim_list, activation='relu', batch_norm=True, dropout=0):
