@@ -143,6 +143,7 @@ class STGCN3DGEPModel(nn.Module):
 		for num in range(N):
 			cell_input = x[num]
 			h, _ = self.dec(cell_input)
+			h = h*cell_input
 			out = self.predictor(h)
 			pred_outs[num] = out
 
