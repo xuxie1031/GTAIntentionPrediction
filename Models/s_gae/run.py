@@ -15,6 +15,21 @@ from trajectories import *
 from loader import *
 
 
+def stats(dataloader, args):
+    train_num_dict = {}
+
+    for batch in dataloader:
+        _, _, _, num_nodes_list = batch
+
+        for idx in range(dataloader.batch_size):
+            num_nodes = num_nodes_list[idx]
+            if num_nodes not in train_num_dict.keys(): train_num_dict[num_nodes] = 0
+            train_num_dict[num_nodes] += 1
+    
+    for key, value in train_num_dict.items():
+        print('{}:{}'.format(key, value))
+            
+
 def exec_model(dataloader, args):
     dev = torch.device('cuda:0')
     net = GCNVAE(args.in_channels, args.h_dim1, args.h_dim2, dropout=args.dropout, use_cuda=args.use_cuda, device=dev)
@@ -176,7 +191,8 @@ def main():
         torch.save(state, loader_name)
     print(len(d_loader))
 
-    exec_model(d_loader, args)
+    # exec_model(d_loader, args)
+    stats(d_loader, args)
 
 if __name__ == '__main__':
     main()

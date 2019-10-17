@@ -20,6 +20,34 @@ from loader import *
 from gcn_vae import *
 
 
+def stats(dataloader_train, dataloader_test, args):
+    train_num_dict = {}
+    for batch in dataloader_train:
+        _, _, _, num_nodes_list = batch
+
+        for idx in range(dataloader_train.batch_size):
+            num_nodes = num_nodes_list[idx]
+            if num_nodes not in train_num_dict.keys(): train_num_dict[num_nodes] = 0
+            train_num_dict[num_nodes] += 1
+    
+    test_num_dict = {}
+    for batch in dataloader_test:
+        _, _, _, num_nodes_list = batch
+
+        for idx in range(dataloader_test.batch_size):
+            num_nodes = num_nodes_list[idx]
+            if num_nodes not in test_num_dict.keys(): test_num_dict[num_nodes] = 0
+            test_num_dict[num_nodes] += 1
+    
+    print('*** train stats ***')
+    for key, value in train_num_dict.items():
+        print('{}:{}'.format(key, value))
+    
+    print('*** test stats ***')
+    for key, value in test_num_dict.items():
+        print('{}:{}'.format(key, value))
+
+
 def exec_model(dataloader_train, dataloader_test, args):
     dev = torch.device('cpu')
     if args.use_cuda:
