@@ -61,6 +61,63 @@ def exec_model(dataloader_train, dataloader_test, args):
         for batch in dataloader_train:
             input_data_list, pred_data_list, _, num_node_list = batch
 
-            num2input_dict, num2pred_dict = data_batch(input_data_list)
-            for num in num2input_dict.keys():
-                pass
+            t_start = time.time()
+            batch_size = len(input_data_list)
+            batch_data = data_batch(input_data_list, pred_data_list, num_node_list, args.obs_len, args.pred_len, args.num_feature, args.vmax)
+            batch_data, _ = data_vectorize(batch_data)
+            batch_input_data, batch_pred_data = batch_data[:, :-args.pred_len, :, :], batch_data[:, -args.pred_len:, :, :]
+
+            inputs = data_feeder(batch_input_data)
+
+            As_seq = []
+            for i in range(args.obs_len-1):
+                As = []
+                for num in range(batch_size):
+                    g = Graph(batch_data[num, i, :, :], args.vmax)
+                    A = g.normalize_undigraph()
+                    As.append(A)
+                As = torch.stack(As)
+                As_seq.append(As)
+            As_seq = torch.stack(As_seq)
+            As = As_seq[0]
+
+            obs_sentence_prob = obs_parse(batch_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
+            pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, args)
+
+            one_hots_pred_seq = data_feeder_onehots(pred_sentence, num_node_list, args.vmax)
+
+            if args.use_cuda:
+                inputs = inputs.to(dev)
+                batch_pred_data = batch_pred_data.to(dev)
+                As = As.to(dev)
+                one_hots_pred_seq = one_hots_pred_seq.to(dev)
+
+            pred_outs = stgcn_gep(inputs, As, one_hots_pred_seq)
+
+            loss = 0.0
+            for i in range(len(pred_outs)):
+                if epoch < args.pretrain_epochs:
+                    loss += mse_loss(pred_outs[i], batch_pred_data[i])
+                else:
+                    loss += nll_loss(pred_outs[i], batch_pred_data[i])
+            loss_batch = loss.item() / batch_size
+            loss /= batch_size
+
+            optimizer.zero_grad()
+            loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(stgcn_gep.parameters(), args.grad_clip)
+            optimizer.step()
+
+            t_end = time.time()
+            loss_epoch += loss_batch
+            num_batch += 1
+
+            print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
+
+        loss_epoch /= num_batch
+        print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
+
+        stgcn_gep.eval()
+        print('****** Testing beginning ******')
+        
