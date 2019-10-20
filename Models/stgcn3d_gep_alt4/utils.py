@@ -21,12 +21,12 @@ class WriteOnceDict(dict):
 			super(WriteOnceDict, self).__setitem__(key, value)
 
 
-def data_feeder_onehots(batch_onehots, vmax, num_nodes_list):
+def data_feeder_onehots(batch_onehots, vmax, num_node_list):
     N, T, C = batch_onehots.size()
     data = torch.zeros(N, T, vmax, C)
     for num in range(N):
         for i in range(T):
-            data[num, i, :num_nodes_list[num]] = batch_onehots[num, i]
+            data[num, i, :num_node_list[num]] = batch_onehots[num, i]
     data = data.permute(0, 3, 1, 2).contiguous()
 
     return data
