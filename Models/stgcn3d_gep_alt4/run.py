@@ -186,6 +186,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--obs_len', type=int, default=15)
     parser.add_argument('--pred_len', type=int, default=25)
+    parser.add_argument('--vmax', type=int, default=60)
     parser.add_argument('--in_channels', type=int, default=4)
     parser.add_argument('--out_dim', type=int, default=5)
     parser.add_argument('--nc', type=int, default=3)

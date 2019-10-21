@@ -21,7 +21,7 @@ class WriteOnceDict(dict):
 			super(WriteOnceDict, self).__setitem__(key, value)
 
 
-    def data_feeder(batch_data):
+def data_feeder(batch_data):
     N, T, V, _ = batch_data.size()
     data = torch.zeros(N, T, V, V, 4)
     for i in range(V):
