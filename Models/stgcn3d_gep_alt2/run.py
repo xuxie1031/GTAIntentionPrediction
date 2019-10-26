@@ -230,10 +230,10 @@ def main():
     parser.add_argument('--residual', action='store_true', default=True)
     parser.add_argument('--gru', action='store_true', default=True)
     parser.add_argument('--use_cuda', action='store_true', default=True)
-    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--gpu', type=int, default=2)
     parser.add_argument('--grammar_root', type=str, default='../grammar')
-    parser.add_argument('--grammar_file', type=str, default='tmp/NGSIM/grammar/NGSIM_xu.pcfg')
-    parser.add_argument('--grammar_prior', type=str, default='tmp/NGSIM/NGSIM_xu_duration_prior.json')
+    parser.add_argument('--grammar_file', type=str, default='tmp/NGSIM/grammar/NGSIM_apollo.pcfg')
+    parser.add_argument('--grammar_prior', type=str, default='tmp/NGSIM/NGSIM_apollo_duration_prior.json')
     parser.add_argument('--grammar_epsilon', type=float, default=1e-10)
     parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
     parser.add_argument('--dset_tag', type=str, default='')
@@ -249,6 +249,10 @@ def main():
     _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
 
     exec_model(train_loader, test_loader, args)
+
+    #print(len(train_loader))
+    #print(len(test_loader))
+    #stats(train_loader, test_loader, args)
 
 
 if __name__ == '__main__':

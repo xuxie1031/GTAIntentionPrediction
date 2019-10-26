@@ -6,6 +6,7 @@
 venv
 dataset
 saved_features
+TrajDset
 
 record*
 sentences*

@@ -47,17 +47,17 @@ def exec_model(dataloader, args):
                 inputs = data_feeder(batch_data)
 
                 As, pos_weights, norms, targets = [], [], [], []
-                for i in range(T):
-                    g = Graph(batch_data[i])
+                for i in range(T-1):
+                    g = Graph(batch_data[i], args.vmax)
                     A = g.normalize_undigraph()
                     pos_weight = g.graph_pos_weight()
                     norm = g.graph_norm()
                     target = g.graph_A()
                     
-                    As = As.append(A)
-                    pos_weights = pos_weights.append(pos_weight)
-                    norms = norms.append(norm)
-                    targets = targets.append(target)
+                    As.append(A)
+                    pos_weights.append(pos_weight)
+                    norms.append(norm)
+                    targets.append(target)
                 As = torch.stack(As)
                 pos_weights = torch.stack(pos_weights)
                 norms = torch.stack(norms)
@@ -117,11 +117,11 @@ def exec_model(dataloader, args):
             inputs = data_feeder(batch_data)
 
             As = []
-            for i in range(T):
-                g = Graph(batch_data[i])
+            for i in range(T-1):
+                g = Graph(batch_data[i], args.vmax)
                 A = g.normalize_undigraph()
                 
-                As = As.append(A)
+                As.append(A)
             As = torch.stack(As)
 
             if args.use_cuda:
@@ -134,6 +134,8 @@ def exec_model(dataloader, args):
             mu = mu.data.cpu().numpy()
             dim = mu.shape[-1]
             dump_features.append(mu)
+
+            print('inner batch {} done'.format(idx))
 
         t_end = time.time()
         num_batch += 1
@@ -163,7 +165,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--obs_len', type=int, default=15)
     parser.add_argument('--pred_len', type=int, default=25)
-    parser.add_argument('--vmax', type=int, default=60)
+    parser.add_argument('--vmax', type=int, default=75)
     parser.add_argument('--in_channels', type=int, default=4)
     parser.add_argument('--h_dim1', type=int, default=128)
     parser.add_argument('--h_dim2', type=int, default=64)
@@ -175,7 +177,7 @@ def main():
     parser.add_argument('--dset_tag', type=str, default='')
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=2)
-    parser.add_argument('--num_epochs', type=int, default=3)
+    parser.add_argument('--num_epochs', type=int, default=5)
     parser.add_argument('--save_name', type=str, default='feature_NGSIM')
     parser.add_argument('--model_name', type=str, default='SGAE.pth.tar')
 

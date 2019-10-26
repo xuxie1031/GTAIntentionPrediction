@@ -90,12 +90,12 @@ class STGCN3DModule(nn.Module):
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
 
         self.st_gcn3d_modules = nn.ModuleList((
-           ST_GCN3D(in_channels, 64, (5, 2), stride=1, dropout=0, residual=False),
-           ST_GCN3D(64, 64, (5, 2), stride=1, dropout=dropout, residual=residual),
+           ST_GCN3D(in_channels, 64, kernel_size, stride=1, dropout=0, residual=False),
            #ST_GCN3D(64, 64, kernel_size, stride=1, dropout=dropout, residual=residual),
            #ST_GCN3D(64, 64, kernel_size, stride=1, dropout=dropout, residual=residual),
-           ST_GCN3D(64, 128, (3, 2), stride=2, dropout=dropout, residual=residual),
-           ST_GCN3D(128, 128, (3, 2), stride=1, dropout=dropout, residual=residual),
+           #ST_GCN3D(64, 64, kernel_size, stride=1, dropout=dropout, residual=residual),
+           ST_GCN3D(64, 128, kernel_size, stride=2, dropout=dropout, residual=residual),
+           #ST_GCN3D(128, 128, kernel_size, stride=1, dropout=dropout, residual=residual),
            #ST_GCN3D(128, 128, kernel_size, stride=1, dropout=dropout, residual=residual),
            #ST_GCN3D(128, cell_input_dim, kernel_size, stride=2, dropout=dropout, residual=residual),
            #ST_GCN3D(cell_input_dim, cell_input_dim, kernel_size, stride=1, dropout=dropout, residual=residual),

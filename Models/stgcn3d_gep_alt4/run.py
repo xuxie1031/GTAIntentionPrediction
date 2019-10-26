@@ -13,7 +13,7 @@ from utils import *
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
-sys.path.append(os.path.join(os.getcwd(), '..', 's_gae'))
+sys.path.append(os.path.join(os.getcwd(), '..', 's_gae_alt1'))
 sys.path.append(os.path.join(os.getcwd(), '..', '..', 'Saved'))
 from trajectories import *
 from loader import *
@@ -31,7 +31,7 @@ def exec_model(dataloader_train, dataloader_test, args):
         os.makedirs('models')
         saved_state = {}
         
-        state = torch.load(os.path.join('..', 's_gae', 'saved_models', 'SGAE.pth.tar'))
+        state = torch.load(os.path.join('..', 's_gae_alt1', 'saved_models', 'SGAE.pth.tar'))
         saved_state['sgae'] = state['model']
 
         state = torch.load(os.path.join('..', 'cluster', 'saved_models', 'Cluster.pth.tar'))
@@ -63,7 +63,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
             t_start = time.time()
             batch_size = len(input_data_list)
-            batch_data = data_batch(input_data_list, pred_data_list, num_node_list, args.obs_len, args.pred_len, args.num_feature, args.vmax)
+            batch_data = data_batch(input_data_list, pred_data_list, num_node_list, args.obs_len, args.pred_len, args.dset_feature, args.vmax)
             batch_data, _ = data_vectorize(batch_data)
             batch_input_data, batch_pred_data = batch_data[:, :-args.pred_len, :, :], batch_data[:, -args.pred_len:, :, :]
 
@@ -82,7 +82,7 @@ def exec_model(dataloader_train, dataloader_test, args):
             As = As_seq[0]
 
             obs_sentence_prob = obs_parse(batch_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
-            pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, args)
+            pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, parser, args)
 
             one_hots_pred_seq = data_feeder_onehots(pred_sentence, num_node_list, args.vmax)
 
@@ -128,10 +128,10 @@ def exec_model(dataloader_train, dataloader_test, args):
 
             t_start = time.time()
             batch_size = len(input_data_list)
-            batch_data = data_batch(input_data_list, pred_data_list, num_node_list, args.obs_len, args.pred_len, args.num_feature, args.vmax)
+            batch_data = data_batch(input_data_list, pred_data_list, num_node_list, args.obs_len, args.pred_len, args.dset_feature, args.vmax)
             batch_input_data, batch_pred_data = batch_data[:, :-args.pred_len, :, :], batch_data[:, -args.pred_len:, :, :]
 
-            batch_input_data, _ = data_vectorize(batch_input_data)
+            batch_input_data, first_value_dicts = data_vectorize(batch_input_data)
             inputs = data_feeder(batch_input_data)
 
             As_seq = []
@@ -147,7 +147,7 @@ def exec_model(dataloader_train, dataloader_test, args):
             As = As_seq[0]
 
             obs_sentence_prob = obs_parse(batch_input_data, args.obs_len-1, s_gae, As_seq, cluster_obj, args.nc, device=dev)
-            pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, args)
+            pred_sentence = gep_pred_parse(obs_sentence_prob, args.pred_len, duration_prior, parser, args)
 
             one_hots_pred_seq = data_feeder_onehots(pred_sentence, num_node_list, args.vmax)
 
@@ -164,7 +164,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
             error = 0.0
             for i in range(len(pred_rets)):
-                error += displacement_error(pred_rets[i, :, :num_node_list[i], :2], batch_pred_data[i, :, :, :2])
+                error += displacement_error(pred_rets[i, :, :num_node_list[i], :2], batch_pred_data[i, :, :num_node_list[i], :2])
             err_batch = error.item() / batch_size
 
             t_end = time.time()
@@ -183,15 +183,15 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--num_worker', type=int, default=4)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--obs_len', type=int, default=15)
     parser.add_argument('--pred_len', type=int, default=25)
-    parser.add_argument('--vmax', type=int, default=60)
+    parser.add_argument('--vmax', type=int, default=75)
     parser.add_argument('--in_channels', type=int, default=4)
     parser.add_argument('--out_dim', type=int, default=5)
     parser.add_argument('--nc', type=int, default=3)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
-    parser.add_argument('--temporal_kernel_size', type=int, default=3)
+    parser.add_argument('--temporal_kernel_size', type=int, default=5)
     parser.add_argument('--onehots_emb_dim', type=int, default=128)
     parser.add_argument('--cell_input_dim', type=int, default=128)
     parser.add_argument('--cell_h_dim', type=int, default=256)
@@ -202,10 +202,10 @@ def main():
     parser.add_argument('--residual', action='store_true', default=True)
     parser.add_argument('--gru', action='store_true', default=True)
     parser.add_argument('--use_cuda', action='store_true', default=True)
-    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--gpu', type=int, default=3)
     parser.add_argument('--grammar_root', type=str, default='../grammar')
-    parser.add_argument('--grammar_file', type=str, default='tmp/NGSIM/grammar/NGSIM_xu.pcfg')
-    parser.add_argument('--grammar_prior', type=str, default='tmp/NGSIM/NGSIM_xu_duration_prior.json')
+    parser.add_argument('--grammar_file', type=str, default='tmp/NGSIM/grammar/NGSIM_apollo.pcfg')
+    parser.add_argument('--grammar_prior', type=str, default='tmp/NGSIM/NGSIM_apollo_duration_prior.json')
     parser.add_argument('--grammar_epsilon', type=float, default=1e-10)
     parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
     parser.add_argument('--dset_tag', type=str, default='')

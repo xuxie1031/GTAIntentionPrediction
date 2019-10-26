@@ -140,11 +140,16 @@ class NGSIMDataset():
 
     
     def data_save(self, converted_data):
-        converted_data = converted_data[:converted_data.shape[0]//20, :]
+        converted_data = converted_data[converted_data.shape[0]*7//10:converted_data.shape[0]*8//10, :]
 
-        bound = int(converted_data.shape[0]*0.7)
-        train_data = converted_data[:bound, :]
-        test_data = converted_data[bound:, :]
+        # bound = int(converted_data.shape[0]*0.2)
+        # train_data = converted_data[bound:, :]
+        # test_data = converted_data[:bound, :]
+        
+        bound1 = int(converted_data.shape[0]*0.4)
+        bound2 = int(converted_data.shape[0]*0.6)
+        train_data = np.concatenate([converted_data[:bound1, :], converted_data[bound2:, :]], axis=0)
+        test_data = converted_data[bound1:bound2, :]
 
         train_path = os.path.join(self.save_path, 'NGSIMDataset', 'train')
         test_path = os.path.join(self.save_path, 'NGSIMDataset', 'test')
@@ -252,6 +257,6 @@ class GTADataset():
 
 # start preprocess
 # pre_dset = GTADataset('/mnt/Dataset/TrajDset/GTA', save_path='dataset', tag='GTAS', full_tag='straight', number=6)
-pre_dset = NGSIMDataset('/home/xuxie/Dataset/TrajDset/NGSIM', save_path='dataset')
+pre_dset = NGSIMDataset('TrajDset/NGSIM', save_path='dataset')
 # pre_dset = DroneDataset('/home/xuxie/Dataset/traj_dataset/Drone', save_path='dataset')
 pre_dset.pipeline()
