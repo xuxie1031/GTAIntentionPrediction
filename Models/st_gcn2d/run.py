@@ -124,6 +124,8 @@ def exec_model(dataloader_train, dataloader_test, args):
         err_epochs.append(err_epoch)
         print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
         print(err_epochs)
+        np_err_epoch = np.array(err_epochs)
+        np.savetxt("2dADE.csv", np_err_epoch, delimiter=',')
 
 
 def main():
