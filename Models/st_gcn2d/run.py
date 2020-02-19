@@ -124,6 +124,11 @@ def exec_model(dataloader_train, dataloader_test, args):
         err_epochs.append(err_epoch)
         print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
         print(err_epochs)
+    curr_path = os.getcwd()
+    file_count = len([name for name in os.listdir(curr_path) if os.path.isfile(os.path.join(curr_path, name))])
+    curr_name = os.path.join(curr_path, '2dADE' + str(file_count) + '.csv')
+    np_err_epoch = np.array(err_epochs)
+    np.savetxt(curr_name, np_err_epoch, delimiter=',')
 
 
 def main():

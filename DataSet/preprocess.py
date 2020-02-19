@@ -140,7 +140,7 @@ class NGSIMDataset():
 
     
     def data_save(self, converted_data):
-        converted_data = converted_data[converted_data.shape[0]*7//10:converted_data.shape[0]*8//10, :]
+        converted_data = converted_data[converted_data.shape[0]*6//10:converted_data.shape[0]*8//10, :]
 
         # bound = int(converted_data.shape[0]*0.2)
         # train_data = converted_data[bound:, :]
@@ -151,8 +151,8 @@ class NGSIMDataset():
         train_data = np.concatenate([converted_data[:bound1, :], converted_data[bound2:, :]], axis=0)
         test_data = converted_data[bound1:bound2, :]
 
-        train_path = os.path.join(self.save_path, 'NGSIMDataset', 'train')
-        test_path = os.path.join(self.save_path, 'NGSIMDataset', 'test')
+        train_path = os.path.join(self.save_path, 'NGSIMDataset', 'NGSIM','train')
+        test_path = os.path.join(self.save_path, 'NGSIMDataset', 'NGSIM', 'test') # Tony: change so that file directory is correct
 
         if not os.path.exists(train_path): os.makedirs(train_path)
         if not os.path.exists(test_path): os.makedirs(test_path)
