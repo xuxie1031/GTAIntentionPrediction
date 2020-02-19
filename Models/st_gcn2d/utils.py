@@ -43,7 +43,7 @@ def data_vectorize(batch_data_seq):
         frame0 = data_seq[0, :]
         for node in range(num_nodes):
             first_value_dict[node] = frame0[node, :]
-        for i in range(1, len(data_seq)):
+        for i in range(1, len(data_seq)): #1 --> 0 so that all observe frame will be included (orginally exclude first 1) TONY
             frame = data_seq[i]
             vectorized_frame = torch.zeros(num_nodes, data_seq.size(-1))
             for node in range(num_nodes):
@@ -55,7 +55,7 @@ def data_vectorize(batch_data_seq):
     return torch.stack(batch_vectorized_seq), first_value_dicts
 
 
-def data_revert(batch_data_seq, first_value_dicts):
+def data_revert(batch_data_seq, first_value_dicts, dev):
     batch_reverted_seq = []
 
     for i in range(len(batch_data_seq)):
@@ -66,7 +66,9 @@ def data_revert(batch_data_seq, first_value_dicts):
         num_nodes = data_seq.size(1)
         for j, frame in enumerate(data_seq):
             for node in range(num_nodes):
-                reverted_seq[j, node, :] = frame[node, :]+first_value_dict[node][:2]
+                node_value = first_value_dict[node]
+                node_value = node_value.to(dev)
+                reverted_seq[j, node, :] = frame[node, :]+node_value[:2]
         batch_reverted_seq.append(reverted_seq)
 
     return torch.stack(batch_reverted_seq)

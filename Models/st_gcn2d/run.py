@@ -4,9 +4,9 @@ import torch.optim as optim
 
 import argparse
 import time
-from .st_gcn2d import STGCN2DModel
-from .graph import Graph
-from .utils import *
+from st_gcn2d import STGCN2DModel
+from graph import Graph
+from utils import *
 
 import os
 import sys
@@ -20,7 +20,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     if args.use_cuda:
         dev = torch.device('cuda:'+str(args.gpu))
 
-    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout, residual=args.residual)
+    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout) # , residual=args.residual TONY Change
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     err_epochs = []
@@ -43,7 +43,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 batch_data, _ = data_vectorize(batch_data)
                 batch_input_data, batch_pred_data = batch_data[:, :-args.pred_len, :, :], batch_data[:, -args.pred_len:, :, :]
 
-                inputs = data_feeder(batch_input_data)
+                inputs = data_feeder(batch_input_data)  # dim1 number of frame span with same num of agents dim2 xy coord dim3 frames dim4 agents
 
                 g = Graph(batch_input_data[:, 0, :, :])
                 As = g.normalize_undigraph()
@@ -93,7 +93,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 batch_size = len(num2input_dict[num])
                 batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
 
-                batch_input_data, first_values_dicts = data_vectorize(batch_input_data)
+                batch_input_data, first_values_dicts = data_vectorize(batch_input_data) # Issue is here
                 inputs = data_feeder(batch_input_data)
 
                 g = Graph(batch_input_data[:, 0, :, :])
@@ -105,7 +105,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                     batch_pred_data = batch_pred_data.to(dev)
                 
                 preds = net(inputs, As)
-                batch_ret_data = data_revert(preds[:, :, :, :2], first_values_dicts)
+                batch_ret_data = data_revert(preds[:, :, :, :2], first_values_dicts, dev)
                 batch_ret_data = batch_ret_data[:, :, :, :2]
 
                 error = 0.0
@@ -155,23 +155,23 @@ def main():
     args = parser.parse_args()
 
     loader_name = args.dset_name+'_loader.pth.tar'
-	if os.path.exists(loader_name):
-		assert os.path.isfile(loader_name)
-		state = torch.load(loader_name)
-		
-		train_loader = state['train']
-		test_loader = state['test']
-	else:
-		_, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
-		_, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
-		
-		state = {}
-		state['train'] = train_loader
-		state['test'] = test_loader
-		torch.save(state, loader_name)
+    if os.path.exists(loader_name):
+        assert os.path.isfile(loader_name)
+        state = torch.load(loader_name)
 
-	print(len(train_loader))
-	print(len(test_loader))
+        train_loader = state['train']
+        test_loader = state['test']
+    else:
+        _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
+        _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+
+        state = {}
+        state['train'] = train_loader
+        state['test'] = test_loader
+        torch.save(state, loader_name)
+
+    print(len(train_loader))
+    print(len(test_loader))
 
     exec_model(train_loader, test_loader, args)
 

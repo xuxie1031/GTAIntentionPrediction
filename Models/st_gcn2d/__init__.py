@@ -1,1 +1,1 @@
-from .st_gcn2d import *
+from st_gcn2d import *
