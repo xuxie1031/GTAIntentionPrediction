@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 class Graph:
     # batch_templates size: (N, V, 4), 4 dims are: x, y, vx, vy
@@ -41,7 +42,7 @@ class Graph:
         for num in range(N):
             for k in range(self.s_kernel):
                 A = self.A[num, k]
-                D1 = np.sum(A, 0)+alpha
+                D1 = torch.sum(A, 0)+alpha
                 Dn = torch.zeros(V, V)
                 for i in range(V):
                     Dn[i, i] = D1[i]**(-0.5)

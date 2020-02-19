@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from .graph import Graph
-from .utils import *
+from graph import Graph
+from utils import *
 
 class GraphConvNet2D(nn.Module):
     def __init__(self, in_channels, out_channels, s_kernel_size=1, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1, bias=True):
@@ -18,7 +18,8 @@ class GraphConvNet2D(nn.Module):
         
     
     def forward(self, x, A):
-        assert A.size(0) == self.s_kernel_size
+        # print(A.size(1))
+        assert A.size(1) == self.s_kernel_size
 
         x = self.conv(x)
 
@@ -90,11 +91,12 @@ class STGCN2DModel(nn.Module):
         self.pred_len = pred_len
         self.out_dim = out_dim
         self.device = device
+
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
         kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
 
         self.st_gcn2d_modules = nn.ModuleList((
-            ST_GCN2D(in_channels, 64, kernel_size, stride=1, residual=False, **kwargs0),
+            ST_GCN2D(in_channels, 64, kernel_size, stride=1, residual=False, **kwargs0), # residual = False
             ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
             ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
             ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
@@ -132,10 +134,10 @@ class STGCN2DModel(nn.Module):
             x, _ = gcn(x, A)
         
         x = x.permute(0, 3, 1, 2).contiguous()
-        data_pool = nn.AvgPool1d(T)
+        data_pool = nn.AvgPool2d((1,3))  # from 1d pooling to 2d pooling CURRENTLY WORKING HERE
         x = data_pool(x)
-        x = x.view(-1, V, C)
-
+        # x = x.view(V, N, -1)
+        x = x.view(-1, V, 256)
         # prediction
         for i, data in enumerate(x):
             data = data.repeat(self.pred_len, 1, 1)

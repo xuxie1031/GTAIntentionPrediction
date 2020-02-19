@@ -41,21 +41,21 @@ class TrajectoryDataset(Dataset):
         ids_seq_list = []
         seq_list = []
 
-        for path in all_files:
-            data = read_file(path)
-            frames = np.unique(data[:, 0]).tolist()
+        for path in all_files:  # iterate through all files
+            data = read_file(path)  # import data
+            frames = np.unique(data[:, 0]).tolist()  # number of frames
             frame_data = []
-            for frame in frames:
-                frame_data.append(data[frame == data[:, 0], :])
-            num_seq = len(frames)-self.seq_len+1
+            for frame in frames:  # iterate through each frame number
+                frame_data.append(data[frame == data[:, 0], :])  # list of data each particular frame
+            num_seq = len(frames)-self.seq_len+1  # total number of frames-(obs+pred)+1 for separating all frames to saparate trials
 
             for idx in range(num_seq+1):
-                frame_data_seg = frame_data[idx:idx+(self.seq_len-1)*self.frame_skip+1:self.frame_skip]
+                frame_data_seg = frame_data[idx:idx+(self.seq_len-1)*self.frame_skip+1:self.frame_skip]  # list of data in desired seq of frames of len obs+pred
                 if len(frame_data_seg) < self.seq_len: break
-                curr_seq_data = np.concatenate(frame_data_seg, axis=0)
+                curr_seq_data = np.concatenate(frame_data_seg, axis=0)  # numpy array of data in desired frame seq
 
-                agents_in_curr_seq = np.unique(curr_seq_data[:, 1])
-                curr_seq = np.zeros((len(agents_in_curr_seq), self.num_feature, self.seq_len))
+                agents_in_curr_seq = np.unique(curr_seq_data[:, 1])  # agents in the frame seq
+                curr_seq = np.zeros((len(agents_in_curr_seq), self.num_feature, self.seq_len))  # 3-dim np array dim1: saparate agents dim2,3: frame x features
                 curr_ids = np.zeros((len(agents_in_curr_seq)))
                 agent_flag = True
 
@@ -106,9 +106,9 @@ class TrajectoryDataset(Dataset):
 
                 # if num_nodes > self.min_agent and count_veh > 0 and count_ped > 0:
                 if num_nodes > self.min_agent and agent_flag:
-                    num_nodes_seq_list.append(num_nodes)
-                    ids_seq_list.append(curr_ids[:num_nodes])
-                    seq_list.append(curr_seq[:num_nodes])
+                    num_nodes_seq_list.append(num_nodes)  # number of agents in the frame seq
+                    ids_seq_list.append(curr_ids[:num_nodes])  # numpy of ids in the frame seq
+                    seq_list.append(curr_seq[:num_nodes])  # data in the frame seq
 
         self.num_seq = len(seq_list)
         seq_list = np.concatenate(seq_list, axis=0)
