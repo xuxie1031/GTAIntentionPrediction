@@ -1,7 +1,6 @@
 .vscode
 *.pyc
 *.txt
-*.csv
 
 venv
 dataset
