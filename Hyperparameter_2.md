@@ -7,3 +7,5 @@ STGCN2d Hyperparameter:
 --obs_len 10 -pred_len 12 --frame_skip 2 --num_epochs 50
 
 (other arguments are default)
+
+Result 11
