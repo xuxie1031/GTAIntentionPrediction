@@ -20,7 +20,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     if args.use_cuda:
         dev = torch.device('cuda:'+str(args.gpu))
 
-    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout) # , residual=args.residual TONY Change
+    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.enc_hidden_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout) # , residual=args.residual TONY Change
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     err_epochs = []
@@ -43,7 +43,8 @@ def exec_model(dataloader_train, dataloader_test, args):
                 batch_data, _ = data_vectorize(batch_data)
                 batch_input_data, batch_pred_data = batch_data[:, :-args.pred_len, :, :], batch_data[:, -args.pred_len:, :, :]
 
-                inputs = data_feeder(batch_input_data)  # dim1 number of frame span with same num of agents dim2 xy coord dim3 frames dim4 agents
+                # inputs = data_feeder(batch_input_data)
+                inputs = batch_input_data
 
                 g = Graph(batch_input_data[:, 0, :, :])
                 As = g.normalize_undigraph()
@@ -93,8 +94,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 batch_size = len(num2input_dict[num])
                 batch_input_data, batch_pred_data = torch.stack(num2input_dict[num]), torch.stack(num2pred_dict[num])
 
-                batch_input_data, first_values_dicts = data_vectorize(batch_input_data) # Issue is here
-                inputs = data_feeder(batch_input_data)
+                batch_input_data, first_values_dicts = data_vectorize(batch_input_data)
+                # inputs = data_feeder(batch_input_data)
+                inputs = batch_input_data
 
                 g = Graph(batch_input_data[:, 0, :, :])
                 As = g.normalize_undigraph()
@@ -136,17 +138,18 @@ def main():
 
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--obs_len', type=int, default=10)
-    parser.add_argument('--pred_len', type=int, default=12)
-    parser.add_argument('--in_channels', type=int, default=4)
+    parser.add_argument('--obs_len', type=int, default=15)
+    parser.add_argument('--pred_len', type=int, default=25)
+    parser.add_argument('--in_channels', type=int, default=2)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
     parser.add_argument('--temporal_kernel_size', type=int, default=3)
+    parser.add_argument('--enc_hidden_size', type=int, default=16)
     parser.add_argument('--dec_hidden_size', type=int, default=256)
     parser.add_argument('--out_dim', type=int, default=5)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--residual', action='store_true', default=True)
+    parser.add_argument('--residual', action='store_true', default=False)
     parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
     parser.add_argument('--gpu', type=int, default=0)
