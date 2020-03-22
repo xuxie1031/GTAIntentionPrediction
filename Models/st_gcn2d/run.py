@@ -46,7 +46,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 # inputs = data_feeder(batch_input_data)
                 inputs = batch_input_data[:, :, :, :2]
 
-                g = Graph(batch_input_data[:, -1, :, :])
+                g = Graph(batch_input_data[:, 0, :, :])
                 As = g.normalize_undigraph()
 
                 if args.use_cuda:
@@ -98,7 +98,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 # inputs = data_feeder(batch_input_data)
                 inputs = batch_input_data[:, :, :, :2]
 
-                g = Graph(batch_input_data[:, -1, :, :])
+                g = Graph(batch_input_data[:, 0, :, :])
                 As = g.normalize_undigraph()
 
                 if args.use_cuda:

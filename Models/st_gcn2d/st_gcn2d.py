@@ -112,9 +112,9 @@ class STGCN2DModel(nn.Module):
         if gru:
             self.enc = nn.GRU(in_channels, enc_hidden_size)
 
-        self.dec = nn.LSTM(256, dec_hidden_size)
+        self.dec = nn.LSTM(256*3, dec_hidden_size)
         if gru:
-            self.dec = nn.GRU(256, dec_hidden_size)
+            self.dec = nn.GRU(256*3, dec_hidden_size)
 
         self.output = nn.Linear(dec_hidden_size, out_dim)
 
@@ -136,11 +136,16 @@ class STGCN2DModel(nn.Module):
         for gcn in self.st_gcn2d_modules:
             x, _ = gcn(x, A)
         
-        _, _, T, V = x.size()
+        # _, _, T, V = x.size()
+        # x = x.permute(0, 3, 1, 2).contiguous()
+        # data_pool = nn.AvgPool2d((1, T))
+        # x = data_pool(x)
+        # x = x.view(-1, V, 256)
+
+        _, C, T, V = x.size()
         x = x.permute(0, 3, 1, 2).contiguous()
-        data_pool = nn.AvgPool2d((1, T))
-        x = data_pool(x)
-        x = x.view(-1, V, 256)
+        x = x.view(-1, V, C*T)
+
         # prediction
         for i, data in enumerate(x):
             data = data.repeat(self.pred_len, 1, 1)
