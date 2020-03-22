@@ -44,9 +44,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 batch_input_data, batch_pred_data = batch_data[:, :-args.pred_len, :, :], batch_data[:, -args.pred_len:, :, :]
 
                 # inputs = data_feeder(batch_input_data)
-                inputs = batch_input_data
+                inputs = batch_input_data[:, :, :, :2]
 
-                g = Graph(batch_input_data[:, 0, :, :])
+                g = Graph(batch_input_data[:, -1, :, :])
                 As = g.normalize_undigraph()
 
                 if args.use_cuda:
@@ -96,9 +96,9 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 batch_input_data, first_values_dicts = data_vectorize(batch_input_data)
                 # inputs = data_feeder(batch_input_data)
-                inputs = batch_input_data
+                inputs = batch_input_data[:, :, :, :2]
 
-                g = Graph(batch_input_data[:, 0, :, :])
+                g = Graph(batch_input_data[:, -1, :, :])
                 As = g.normalize_undigraph()
 
                 if args.use_cuda:
@@ -152,9 +152,9 @@ def main():
     parser.add_argument('--residual', action='store_true', default=False)
     parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--dset_name', type=str, default='GTADataset')
-    parser.add_argument('--dset_tag', type=str, default="GTAS")
+    parser.add_argument('--gpu', type=int, default=1)
+    parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
+    parser.add_argument('--dset_tag', type=str, default="NGSIM")
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=2)
     parser.add_argument('--num_epochs', type=int, default=30)
