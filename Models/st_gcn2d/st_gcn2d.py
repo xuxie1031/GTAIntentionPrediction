@@ -18,7 +18,6 @@ class GraphConvNet2D(nn.Module):
         
     
     def forward(self, x, A):
-        # print(A.size(1))
         assert A.size(1) == self.s_kernel_size
 
         x = self.conv(x)
@@ -85,9 +84,10 @@ class ST_GCN2D(nn.Module):
 
 
 class STGCN2DModel(nn.Module):
-    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, dec_hidden_size, out_dim, gru=False, use_cuda=True, device=None, **kwargs):
+    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, enc_hidden_size, dec_hidden_size, out_dim, gru=False, use_cuda=True, device=None, **kwargs):
         super(STGCN2DModel, self).__init__()
 
+        self.enc_dim = enc_hidden_size
         self.pred_len = pred_len
         self.out_dim = out_dim
         self.device = device
@@ -96,7 +96,7 @@ class STGCN2DModel(nn.Module):
         kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
 
         self.st_gcn2d_modules = nn.ModuleList((
-            ST_GCN2D(in_channels, 64, kernel_size, stride=1, residual=False, **kwargs0), # residual = False
+            ST_GCN2D(enc_hidden_size, 64, kernel_size, stride=1, residual=False, **kwargs0),
             ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
             ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
             ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
@@ -108,9 +108,13 @@ class STGCN2DModel(nn.Module):
             ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs)
         ))
 
-        self.dec = nn.LSTM(256, dec_hidden_size)
+        self.enc = nn.LSTM(in_channels, enc_hidden_size)
         if gru:
-            self.dec = nn.GRU(256, dec_hidden_size)
+            self.enc = nn.GRU(in_channels, enc_hidden_size)
+
+        self.dec = nn.LSTM(256*3, dec_hidden_size)
+        if gru:
+            self.dec = nn.GRU(256*3, dec_hidden_size)
 
         self.output = nn.Linear(dec_hidden_size, out_dim)
 
@@ -118,26 +122,30 @@ class STGCN2DModel(nn.Module):
             self.to(device)
 
 
-    # x (N, C, T, V); A (N, K, V, V)
     def forward(self, x, A):
-        N, C, T, V = x.size()
+        N, T, V, _ = x.size()
+        o_enc = torch.zeros(N, T, V, self.enc_dim).to(self.device)
         o_pred = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
 
-        # x = x.permute(0, 3, 1, 2).contiguous()
-        # x = x.view(N, V*C, T)
-        # data_bn = nn.BatchNorm1d(V*C, affine=False)
-        # x = data_bn(x)
-        # x = x.view(N, V, C, T)
-        # x = x.permute(0, 2, 3, 1).contiguous()
+        for i, data in enumerate(x):
+            h_enc, _ = self.enc(data)
+            o_enc[i, :] = h_enc
+
+        x = o_enc.permute(0, 3, 1, 2).contiguous()
 
         for gcn in self.st_gcn2d_modules:
             x, _ = gcn(x, A)
         
+        # _, _, T, V = x.size()
+        # x = x.permute(0, 3, 1, 2).contiguous()
+        # data_pool = nn.AvgPool2d((1, T))
+        # x = data_pool(x)
+        # x = x.view(-1, V, 256)
+
+        _, C, T, V = x.size()
         x = x.permute(0, 3, 1, 2).contiguous()
-        data_pool = nn.AvgPool2d((1,3))  # from 1d pooling to 2d pooling CURRENTLY WORKING HERE
-        x = data_pool(x)
-        # x = x.view(V, N, -1)
-        x = x.view(-1, V, 256)
+        x = x.view(-1, V, C*T)
+
         # prediction
         for i, data in enumerate(x):
             data = data.repeat(self.pred_len, 1, 1)
