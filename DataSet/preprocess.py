@@ -140,7 +140,7 @@ class NGSIMDataset():
 
     
     def data_save(self, converted_data):
-        converted_data = converted_data[converted_data.shape[0]*0//10:converted_data.shape[0]*10//10, :]
+        converted_data = converted_data[converted_data.shape[0]*4//10:converted_data.shape[0]*7//10, :]
 
         # bound = int(converted_data.shape[0]*0.2)
         # train_data = converted_data[bound:, :]
