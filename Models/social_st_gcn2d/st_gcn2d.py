@@ -84,7 +84,7 @@ class ST_GCN2D(nn.Module):
 
 
 class STGCN2DModel(nn.Module):
-    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, enc_hidden_size, dec_hidden_size, out_dim, gru=False, use_cuda=True, device=None, **kwargs):
+    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, dyn_hidden_size, enc_hidden_size, dec_hidden_size, out_dim, gru=False, use_cuda=True, device=None, **kwargs):
         super(STGCN2DModel, self).__init__()
 
         self.enc_dim = enc_hidden_size
@@ -108,9 +108,11 @@ class STGCN2DModel(nn.Module):
             ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs)
         ))
 
-        self.enc = nn.LSTM(in_channels, enc_hidden_size)
+        self.dyn = nn.Linear(in_channels, dyn_hidden_size)
+
+        self.enc = nn.LSTM(dyn_hidden_size, enc_hidden_size)
         if gru:
-            self.enc = nn.GRU(in_channels, enc_hidden_size)
+            self.enc = nn.GRU(dyn_hidden_size, enc_hidden_size)
 
         self.dec = nn.LSTM(256*4+enc_hidden_size, dec_hidden_size)
         if gru:
@@ -127,6 +129,8 @@ class STGCN2DModel(nn.Module):
         o_enc = torch.zeros(N, T, V, self.enc_dim).to(self.device)
         o_enc_h = torch.zeros(N, V, self.enc_dim).to(self.device)
         o_pred = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
+
+        x = self.dyn(x)
 
         for i, data in enumerate(x):
             h_enc, tup_enc = self.enc(data)

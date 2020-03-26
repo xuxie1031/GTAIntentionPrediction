@@ -20,7 +20,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     if args.use_cuda:
         dev = torch.device('cuda:'+str(args.gpu))
 
-    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.enc_hidden_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout) # , residual=args.residual TONY Change
+    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, ars.dyn_hidden_size, args.enc_hidden_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout) # , residual=args.residual TONY Change
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     err_epochs = []
@@ -143,7 +143,8 @@ def main():
     parser.add_argument('--in_channels', type=int, default=2)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
     parser.add_argument('--temporal_kernel_size', type=int, default=3)
-    parser.add_argument('--enc_hidden_size', type=int, default=16)
+    parser.add_argument('--dyn_hidden_size', type=int, default=16)
+    parser.add_argument('--enc_hidden_size', type=int, default=32)
     parser.add_argument('--dec_hidden_size', type=int, default=256)
     parser.add_argument('--out_dim', type=int, default=5)
     parser.add_argument('--lr', type=float, default=1e-3)
