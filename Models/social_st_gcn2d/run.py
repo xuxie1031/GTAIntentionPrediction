@@ -5,7 +5,7 @@ import torch.optim as optim
 import argparse
 import time
 from st_gcn2d import STGCN2DModel
-from graph_full import Graph
+from graph import Graph
 from utils import *
 
 import os
