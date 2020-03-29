@@ -33,6 +33,27 @@ class GraphConvNet2D(nn.Module):
         return x.contiguous(), A
 
 
+class GraphConvNetBrief2D(nn.Module):
+    def __init__(self, in_channels, out_channels, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1, bias=True):
+        super(GraphConvNetBrief2D, self).__init__()
+
+        self.conv = nn.Conv2d(in_channels, out_channels, 
+            kernel_size=(t_kernel_size, 1),
+            padding=(t_padding, 0),
+            stride=(t_stride, 1),
+            dilation=(t_dilation, 1),
+            bias=bias)
+
+
+    def forward(self, x, A):
+        x = self.conv(x)
+
+        n, c, t, v = x.size()
+        x = torch.einsum('nctv,nvw->nctw', (x, A))
+
+        return x, A        
+
+
 class ST_GCN2D(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, dropout=0, residual=True):
         super(ST_GCN2D, self).__init__()
@@ -41,7 +62,8 @@ class ST_GCN2D(nn.Module):
         assert kernel_size[0] % 2 == 1
         padding = ((kernel_size[0]-1) // 2, 0)
 
-        self.gcn = GraphConvNet2D(in_channels, out_channels, kernel_size[1])
+        # self.gcn = GraphConvNet2D(in_channels, out_channels, kernel_size[1])
+        self.gcn = GraphConvNetBrief2D(in_channels, out_channels)
 
         self.tcn = nn.Sequential(
             nn.BatchNorm2d(out_channels),
