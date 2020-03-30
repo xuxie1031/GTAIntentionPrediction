@@ -62,8 +62,8 @@ class ST_GCN2D(nn.Module):
         assert kernel_size[0] % 2 == 1
         padding = ((kernel_size[0]-1) // 2, 0)
 
-        # self.gcn = GraphConvNet2D(in_channels, out_channels, kernel_size[1])
-        self.gcn = GraphConvNetBrief2D(in_channels, out_channels)
+        self.gcn = GraphConvNet2D(in_channels, out_channels, kernel_size[1])
+        # self.gcn = GraphConvNetBrief2D(in_channels, out_channels)
 
         self.tcn = nn.Sequential(
             nn.BatchNorm2d(out_channels),
@@ -106,7 +106,7 @@ class ST_GCN2D(nn.Module):
 
 
 class STGCN2DModel(nn.Module):
-    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, dyn_hidden_size, enc_hidden_size, dec_hidden_size, out_dim, gru=False, use_cuda=True, device=None, **kwargs):
+    def __init__(self, pred_len, in_channels, spatial_kernel_size, temporal_kernel_size, dyn_hidden_size, self_hidden_size, enc_hidden_size, dec_hidden_size, out_dim, gru=False, use_cuda=True, device=None, **kwargs):
         super(STGCN2DModel, self).__init__()
 
         self.enc_dim = enc_hidden_size
@@ -115,32 +115,36 @@ class STGCN2DModel(nn.Module):
         self.device = device
 
         kernel_size = (temporal_kernel_size, spatial_kernel_size)
-        kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
+        kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout' and k != 'residual'}
 
         self.st_gcn2d_modules = nn.ModuleList((
             ST_GCN2D(enc_hidden_size, 64, kernel_size, stride=1, residual=False, **kwargs0),
             ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
+            # ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
+            # ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
             ST_GCN2D(64, 128, kernel_size, stride=2, **kwargs),
             ST_GCN2D(128, 128, kernel_size, stride=1, **kwargs),
-            ST_GCN2D(128, 128, kernel_size, stride=1, **kwargs),
+            # ST_GCN2D(128, 128, kernel_size, stride=1, **kwargs),
             ST_GCN2D(128, 256, kernel_size, stride=2, **kwargs),
             ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs),
-            ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs)
+            # ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs)
         ))
 
         self.dyn = nn.Linear(in_channels, dyn_hidden_size)
 
-        self.enc = nn.LSTM(dyn_hidden_size, enc_hidden_size)
+        self.enc = nn.LSTM(in_channels, enc_hidden_size)
         if gru:
-            self.enc = nn.GRU(dyn_hidden_size, enc_hidden_size)
+            self.enc = nn.GRU(in_channels, enc_hidden_size)
 
-        self.dec = nn.LSTM(256*1+enc_hidden_size, dec_hidden_size)
+        self.hidden = nn.Linear(enc_hidden_size, self_hidden_size)
+
+        self.dec = nn.LSTM(256*1+self_hidden_size, dec_hidden_size)
         if gru:
-            self.dec = nn.GRU(256*1+enc_hidden_size, dec_hidden_size)
+            self.dec = nn.GRU(256*1+self_hidden_size, dec_hidden_size)
 
         self.output = nn.Linear(dec_hidden_size, out_dim)
+        
+        self.leaky_relu = nn.LeakyReLU(0.1)
 
         if use_cuda:
             self.to(device)
@@ -152,7 +156,7 @@ class STGCN2DModel(nn.Module):
         o_enc_h = torch.zeros(N, V, self.enc_dim).to(self.device)
         o_pred = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
 
-        x = self.dyn(x)
+        # x = self.leaky_relu(self.dyn(x))
 
         for i, data in enumerate(x):
             h_enc, tup_enc = self.enc(data)
@@ -173,6 +177,8 @@ class STGCN2DModel(nn.Module):
         # _, C, T, V = x.size()
         # x = x.permute(0, 3, 1, 2).contiguous()
         # x = x.view(-1, V, C*T)
+
+        o_enc_h = self.hidden(o_enc_h)
 
         x = torch.cat((x, o_enc_h), 2)
 
