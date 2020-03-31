@@ -33,7 +33,7 @@ def exec_model(dataloader_train, dataloader_test, args):
         for batch in dataloader_train:
             input_data_list, pred_data_list, _, num_nodes_list = batch
             num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_nodes_list)
-
+            
             for num in num2input_dict.keys():
                 t_start = time.time()
                 batch_size = len(num2input_dict[num])
@@ -112,7 +112,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 error = 0.0
                 for i in range(len(preds)):
-                    error += displacement_error(batch_ret_data[i], batch_pred_data[i][:, :, :2])
+                    error += displacement_error(batch_ret_data[i][:15, :, :], batch_pred_data[i][:15, :, :2])
                     # error += final_displacement_error(batch_ret_data[i][-1], batch_pred_data[i][-1][:, :2])
                 err_batch = error.item() / batch_size
 
@@ -146,13 +146,13 @@ def main():
     parser.add_argument('--enc_hidden_size', type=int, default=16)
     parser.add_argument('--dec_hidden_size', type=int, default=256)
     parser.add_argument('--out_dim', type=int, default=5)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=3e-3)
     parser.add_argument('--grad_clip', type=float, default=10.0)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--residual', action='store_true', default=False)
     parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
-    parser.add_argument('--gpu', type=int, default=1)
+    parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--dset_name', type=str, default='NGSIMDataset')
     parser.add_argument('--dset_tag', type=str, default="NGSIM")
     parser.add_argument('--dset_feature', type=int, default=4)

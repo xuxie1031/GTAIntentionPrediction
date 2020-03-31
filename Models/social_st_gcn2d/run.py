@@ -112,7 +112,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 error = 0.0
                 for i in range(len(preds)):
-                    error += displacement_error(batch_ret_data[i], batch_pred_data[i][:, :, :2])
+                    error += displacement_error(batch_ret_data[i][:15, :, :], batch_pred_data[i][:15, :, :2])
                     # error += final_displacement_error(batch_ret_data[i][-1], batch_pred_data[i][-1][:, :2])
                 err_batch = error.item() / batch_size
 
@@ -138,15 +138,15 @@ def main():
 
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--obs_len', type=int, default=16)
-    parser.add_argument('--pred_len', type=int, default=15)
+    parser.add_argument('--obs_len', type=int, default=15)
+    parser.add_argument('--pred_len', type=int, default=25)
     parser.add_argument('--in_channels', type=int, default=2)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
     parser.add_argument('--temporal_kernel_size', type=int, default=3)
     parser.add_argument('--dyn_hidden_size', type=int, default=16)
-    parser.add_argument('--self_hidden_size', type=int, default=256)
-    parser.add_argument('--enc_hidden_size', type=int, default=16)
-    parser.add_argument('--dec_hidden_size', type=int, default=512)
+    parser.add_argument('--self_hidden_size', type=int, default=32)
+    parser.add_argument('--enc_hidden_size', type=int, default=32)
+    parser.add_argument('--dec_hidden_size', type=int, default=32)
     parser.add_argument('--out_dim', type=int, default=5)
     parser.add_argument('--lr', type=float, default=3e-3)
     parser.add_argument('--grad_clip', type=float, default=10.0)
