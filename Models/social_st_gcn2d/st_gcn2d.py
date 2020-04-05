@@ -54,6 +54,26 @@ class GraphConvNetBrief2D(nn.Module):
         return x, A        
 
 
+class NaiveGCN(nn.Module):
+    def __init__(self, in_channels, s_kernel_size, bias=True):
+        super(NaiveGCN, self).__init__()
+
+        self.s_kernel_size = s_kernel_size
+        # self.conv1 = nn.Conv1d(in_channels, out_channels*s_kernel_size, 
+        #                       kernel_size=1)
+        
+        self.conv1 = nn.Conv1d(in_channels, 32, kernel_size=1)
+
+        self.leaky_relu = nn.LeakyReLU(0.1)
+
+    def forward(self, x, A):
+        assert A.size(1) == self.s_kernel_size
+        
+        x = self.leaky_relu(self.conv1(x))
+
+        return x, A
+
+
 class ST_GCN2D(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, dropout=0, residual=True, apply_gcn=False):
         super(ST_GCN2D, self).__init__()
@@ -138,6 +158,8 @@ class STGCN2DModel(nn.Module):
             # ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs)
         ))
 
+        self.naive_gcn = NaiveGCN(enc_hidden_size, kernel_size[1])
+
         self.dyn = nn.Linear(in_channels, dyn_hidden_size)
 
         self.enc = nn.LSTM(dyn_hidden_size, enc_hidden_size)
@@ -146,9 +168,9 @@ class STGCN2DModel(nn.Module):
 
         self.hidden = nn.Linear(enc_hidden_size, self_hidden_size)
 
-        self.dec = nn.LSTM(40+self_hidden_size, dec_hidden_size)
+        self.dec = nn.LSTM(32+self_hidden_size, dec_hidden_size)
         if gru:
-            self.dec = nn.GRU(40+self_hidden_size, dec_hidden_size)
+            self.dec = nn.GRU(32+self_hidden_size, dec_hidden_size)
 
         self.output = nn.Linear(dec_hidden_size, out_dim)
         
@@ -166,31 +188,30 @@ class STGCN2DModel(nn.Module):
 
         x = self.leaky_relu(self.dyn(x))
 
-        for i, data in enumerate(x):
-            h_enc, tup_enc = self.enc(data)
-            o_enc[i, :] = h_enc
-            o_enc_h[i, :] = tup_enc[0].view(V, self.enc_dim)
+        # for i, data in enumerate(x):
+        #     h_enc, tup_enc = self.enc(data)
+        #     o_enc[i, :] = h_enc
+        #     o_enc_h[i, :] = tup_enc[0].view(V, self.enc_dim)
 
-        x = o_enc.permute(0, 3, 1, 2).contiguous()
+        # x = o_enc.permute(0, 3, 1, 2).contiguous()
 
-        for gcn in self.st_gcn2d_modules:
-            x, _ = gcn(x, A)
+        # for gcn in self.st_gcn2d_modules:
+        #     x, _ = gcn(x, A)
         
-        _, C, T, V = x.size()
-        x = x.permute(0, 3, 1, 2).contiguous()
-        # data_pool = nn.AvgPool2d((1, T))
-        # x = data_pool(x)
-        # x = x.view(-1, V, C)
-
-        data_pool = nn.MaxPool2d((1, 2), padding=(0, 1))
-        x = data_pool(x)
-        x = x.view(-1, V, C*5)
-
         # _, C, T, V = x.size()
         # x = x.permute(0, 3, 1, 2).contiguous()
-        # x = x.view(-1, V, C*T)
+        # data_pool = nn.MaxPool2d((1, 2), padding=(0, 1))
+        # x = data_pool(x)
+        # x = x.view(-1, V, C*5)
 
-        # o_enc_h = self.hidden(o_enc_h)
+        for i, data in enumerate(x):
+            _, tup_enc = self.enc(data)
+            o_enc_h[i, :] = tup_enc[0].view(V, self.enc_dim)
+
+        x = o_enc_h.clone()
+        x = x.permute(0, 2, 1)
+        x = self.naive_gcn(x)
+
         o_enc_h = self.leaky_relu(self.hidden(o_enc_h))
         
         x = torch.cat((x, o_enc_h), 2)
