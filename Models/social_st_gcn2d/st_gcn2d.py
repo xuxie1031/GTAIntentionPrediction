@@ -60,7 +60,7 @@ class ST_GCN2D(nn.Module):
 
         assert len(kernel_size) == 2
         assert kernel_size[0] % 2 == 1
-        padding = ((kernel_size[0]-1) // 2, 0)
+        # padding = ((kernel_size[0]-1) // 2, 0)
 
         self.apply_gcn = apply_gcn
         self.gcn = GraphConvNet2D(in_channels, out_channels, kernel_size[1])
@@ -69,17 +69,18 @@ class ST_GCN2D(nn.Module):
         tcn_in = out_channels if apply_gcn else in_channels
 
         self.tcn = nn.Sequential(
-            nn.BatchNorm2d(tcn_in),
-            nn.ReLU(inplace=True),
+            # nn.BatchNorm2d(tcn_in),
+            nn.LeakyReLU(0.1, inplace=True),
+            # nn.ReLU(inplace=True),
             nn.Conv2d(
                 tcn_in,
                 out_channels,
                 (kernel_size[0], 1),
-                (stride, 1),
-                padding
+                (stride, 1)
+                # padding
             ),
-            nn.BatchNorm2d(out_channels),
-            nn.Dropout(dropout, inplace=True)
+            # nn.BatchNorm2d(out_channels),
+            # nn.Dropout(dropout, inplace=True)
         )
 
         if not residual:
@@ -124,28 +125,30 @@ class STGCN2DModel(nn.Module):
 
         self.st_gcn2d_modules = nn.ModuleList((
             ST_GCN2D(enc_hidden_size, 64, kernel_size, stride=1, residual=False, apply_gcn=True, **kwargs0),
-            ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
+            ST_GCN2D(64, 16, kernel_size, stride=1, **kwargs),
+            ST_GCN2D(16, 8, kernel_size, stride=1, **kwargs)
             # ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
             # ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
-            ST_GCN2D(64, 128, kernel_size, stride=2, apply_gcn=True, **kwargs),
-            ST_GCN2D(128, 128, kernel_size, stride=1, **kwargs),
+            # ST_GCN2D(64, 64, kernel_size, stride=1, **kwargs),
+            # ST_GCN2D(64, 128, kernel_size, stride=2, apply_gcn=True, **kwargs),
             # ST_GCN2D(128, 128, kernel_size, stride=1, **kwargs),
-            ST_GCN2D(128, 256, kernel_size, stride=2, **kwargs),
-            ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs),
+            # ST_GCN2D(128, 128, kernel_size, stride=1, **kwargs),
+            # ST_GCN2D(128, 256, kernel_size, stride=2, **kwargs),
+            # ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs),
             # ST_GCN2D(256, 256, kernel_size, stride=1, **kwargs)
         ))
 
         self.dyn = nn.Linear(in_channels, dyn_hidden_size)
 
-        self.enc = nn.LSTM(in_channels, enc_hidden_size)
+        self.enc = nn.LSTM(dyn_hidden_size, enc_hidden_size)
         if gru:
-            self.enc = nn.GRU(in_channels, enc_hidden_size)
+            self.enc = nn.GRU(dyn_didden_size, enc_hidden_size)
 
         self.hidden = nn.Linear(enc_hidden_size, self_hidden_size)
 
-        self.dec = nn.LSTM(self_hidden_size, dec_hidden_size)
+        self.dec = nn.LSTM(40+self_hidden_size, dec_hidden_size)
         if gru:
-            self.dec = nn.GRU(self_hidden_size, dec_hidden_size)
+            self.dec = nn.GRU(40+self_hidden_size, dec_hidden_size)
 
         self.output = nn.Linear(dec_hidden_size, out_dim)
         
@@ -161,32 +164,36 @@ class STGCN2DModel(nn.Module):
         o_enc_h = torch.zeros(N, V, self.enc_dim).to(self.device)
         o_pred = torch.zeros(N, self.pred_len, V, self.out_dim).to(self.device)
 
-        # x = self.leaky_relu(self.dyn(x))
+        x = self.leaky_relu(self.dyn(x))
 
         for i, data in enumerate(x):
             h_enc, tup_enc = self.enc(data)
             o_enc[i, :] = h_enc
             o_enc_h[i, :] = tup_enc[0].view(V, self.enc_dim)
 
-        # x = o_enc.permute(0, 3, 1, 2).contiguous()
+        x = o_enc.permute(0, 3, 1, 2).contiguous()
 
-        # for gcn in self.st_gcn2d_modules:
-            # x, _ = gcn(x, A)
+        for gcn in self.st_gcn2d_modules:
+            x, _ = gcn(x, A)
         
-        # _, C, T, V = x.size()
-        # x = x.permute(0, 3, 1, 2).contiguous()
+        _, C, T, V = x.size()
+        x = x.permute(0, 3, 1, 2).contiguous()
         # data_pool = nn.AvgPool2d((1, T))
         # x = data_pool(x)
         # x = x.view(-1, V, C)
+
+        data_pool = nn.MaxPool2d((1, 2), padding=(0, 1))
+        x = data_pool(x)
+        x = x.view(-1, V, C*5)
 
         # _, C, T, V = x.size()
         # x = x.permute(0, 3, 1, 2).contiguous()
         # x = x.view(-1, V, C*T)
 
         # o_enc_h = self.hidden(o_enc_h)
-        x = o_enc_h
+        o_enc_h = self.leaky_relu(self.hidden(o_enc_h))
         
-        # x = torch.cat((x, o_enc_h), 2)
+        x = torch.cat((x, o_enc_h), 2)
 
         # prediction
         for i, data in enumerate(x):

@@ -33,7 +33,7 @@ def exec_model(dataloader_train, dataloader_test, args):
         for batch in dataloader_train:
             input_data_list, pred_data_list, _, num_nodes_list = batch
             num2input_dict, num2pred_dict = data_batch(input_data_list, pred_data_list, num_nodes_list)
-
+            
             for num in num2input_dict.keys():
                 t_start = time.time()
                 batch_size = len(num2input_dict[num])
@@ -68,7 +68,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 optimizer.zero_grad()
                 loss.backward()
 
-                torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
+                # torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
                 optimizer.step()
 
                 t_end = time.time()
@@ -138,19 +138,19 @@ def main():
 
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--obs_len', type=int, default=15)
-    parser.add_argument('--pred_len', type=int, default=25)
+    parser.add_argument('--obs_len', type=int, default=16)
+    parser.add_argument('--pred_len', type=int, default=15)
     parser.add_argument('--in_channels', type=int, default=2)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
     parser.add_argument('--temporal_kernel_size', type=int, default=3)
-    parser.add_argument('--dyn_hidden_size', type=int, default=16)
+    parser.add_argument('--dyn_hidden_size', type=int, default=32)
     parser.add_argument('--self_hidden_size', type=int, default=32)
-    parser.add_argument('--enc_hidden_size', type=int, default=32)
-    parser.add_argument('--dec_hidden_size', type=int, default=32)
+    parser.add_argument('--enc_hidden_size', type=int, default=64)
+    parser.add_argument('--dec_hidden_size', type=int, default=128)
     parser.add_argument('--out_dim', type=int, default=5)
-    parser.add_argument('--lr', type=float, default=3e-3)
+    parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--grad_clip', type=float, default=10.0)
-    parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--dropout', type=float, default=0.0)
     parser.add_argument('--residual', action='store_true', default=False)
     parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
@@ -159,7 +159,7 @@ def main():
     parser.add_argument('--dset_tag', type=str, default="NGSIM")
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=2)
-    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--pretrain_epochs', type=int, default=0)
 
     args = parser.parse_args()
