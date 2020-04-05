@@ -210,7 +210,8 @@ class STGCN2DModel(nn.Module):
 
         x = o_enc_h.clone()
         x = x.permute(0, 2, 1)
-        x = self.naive_gcn(x)
+        x, _ = self.naive_gcn(x, A)
+        x = x.permute(0, 2, 1)
 
         o_enc_h = self.leaky_relu(self.hidden(o_enc_h))
         
