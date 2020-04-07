@@ -12,11 +12,11 @@ class Graph:
 		self.edges(templates)
 
 
-	def edges(self):
+	def edges(self, templates):
 		V = self.A.size(-1)
 
 		# s_kernel == 0
-		self.A[:, 0] = torch.eye(V)
+                self.A[0, :] = torch.eye(V)
 
 		# s_kernel == 1
 		for i in range(V):
@@ -30,8 +30,8 @@ class Graph:
 
 
 	def normalize_undigraph(self, alpha=1e-3):
-		DADs = torch.zeros(self.A.size())
-		DADs.requires_grad = False
+		DAD = torch.zeros(self.A.size())
+		DAD.requires_grad = False
 
 		V = self.A.size(-1)
 
@@ -40,7 +40,7 @@ class Graph:
 			D1 = torch.sum(A, 0)+alpha
 			Dn = torch.zeros(V, V)
 			for i in range(V):
-				D[i, i] = D1[i]**(-0.5)
-			DAD = Dn.mm(A).mm(Dn)
+				Dn[i, i] = D1[i]**(-0.5)
+			DAD[k] = Dn.mm(A).mm(Dn)
 
 		return DAD

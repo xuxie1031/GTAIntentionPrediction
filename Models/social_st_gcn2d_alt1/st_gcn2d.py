@@ -5,7 +5,7 @@ from graph_full import Graph
 from utils import *
 
 class GraphConvNet2D(nn.Module):
-	def __init__(self, in_channels, out_channels, s_kernel_size=1, t_kernel_size=1, t_padding=0, t_dilation=1, bias=True):
+	def __init__(self, in_channels, out_channels, s_kernel_size=1, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1, bias=True):
 		super(GraphConvNet2D, self).__init__()
 
 		self.s_kernel_size = s_kernel_size
@@ -133,7 +133,7 @@ class STGCN2DModel(nn.Module):
 
 		ngbrs, _ = self.enc(ngbrs)
 		T, NV, C = ngbrs.size()
-		ngbrs = ngbrs.view(T, V, NV // V, C)
+		ngbrs = ngbrs.view(T, N, NV // N, C)
 		ngbrs = ngbrs.permute(1, 3, 0, 2)
 
 		for gcn in self.st_gcn2d_modules:
@@ -149,7 +149,7 @@ class STGCN2DModel(nn.Module):
 		x = torch.cat((x, ngbrs), 1)
 		
 		x = x.repeat(self.pred_len, 1, 1)
-		h_dec = self.dec(x)
+		h_dec, _ = self.dec(x)
 		o = self.output(h_dec)
 
-		return o
+		return output_activation(o)

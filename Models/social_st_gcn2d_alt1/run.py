@@ -18,7 +18,7 @@ from loader import *
 def exec_model(dataloader_train, dataloader_test, args):
 	dev = torch.device('cpu')
 	if args.use_cuda:
-		dev = torch.devices('cuda:'+str(args.gpu))
+		dev = torch.device('cuda:'+str(args.gpu))
 
 	net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dyn_hidden_size, args.self_hidden_size, args.enc_hidden_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout, residual=args.residual)
 	optimizer = optim.Adam(net.parameters(), lr=args.lr)
@@ -32,14 +32,14 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 		for batch in dataloader_train:
 			input_data_list, pred_data_list, _, num_node_list = batch
-
+                        
 			batch_size = len(num_node_list)
 			loss_batch = 0
 
 			t_start = time.time()
 			for i in range(batch_size):
 				input_data, pred_data = input_data_list[i], pred_data_list[i]
-
+                                
 				g = Graph(input_data[0, :, :])
 				A = g.normalize_undigraph()
 
