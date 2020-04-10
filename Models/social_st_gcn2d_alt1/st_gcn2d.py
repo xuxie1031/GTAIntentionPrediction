@@ -100,7 +100,8 @@ class STGCN2DModel(nn.Module):
 		self.st_gcn2d_modules = nn.ModuleList((
 			ST_GCN2D(enc_hidden_size, 64, kernel_size, stride=1, residual=False, **kwargs0),
 			ST_GCN2D(64, 16, kernel_size, stride=1, **kwargs),
-		))
+		        ST_GCN2D(16, 8, kernel_size, stride=1, **kwargs)
+                ))
 
 		self.dyn = nn.Linear(in_channels, dyn_hidden_size)
 
@@ -110,9 +111,9 @@ class STGCN2DModel(nn.Module):
 
 		self.hidden = nn.Linear(enc_hidden_size, self_hidden_size)
 
-		self.dec = nn.LSTM(96+self_hidden_size, dec_hidden_size)
+		self.dec = nn.LSTM(40+self_hidden_size, dec_hidden_size)
 		if gru:
-			self.dec = nn.GRU(96+self_hidden_size, dec_hidden_size)
+			self.dec = nn.GRU(40+self_hidden_size, dec_hidden_size)
 
 		self.output = nn.Linear(dec_hidden_size, out_dim)
 

@@ -112,7 +112,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 error = 0.0
                 for i in range(len(preds)):
-                    error += displacement_error(batch_ret_data[i][:15, :, :], batch_pred_data[i][:15, :, :2])
+                    error += displacement_error(batch_ret_data[i][:, :, :], batch_pred_data[i][:, :, :2])[-1]
                     # error += final_displacement_error(batch_ret_data[i][-1], batch_pred_data[i][-1][:, :2])
                 err_batch = error.item() / batch_size
 
@@ -120,7 +120,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 err_epoch += err_batch
                 num_batch += 1
 
-                print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
+                print('epoch {}, batch {}, test_error = {:.6f}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, num, t_end-t_start))
 
         err_epoch /= num_batch
         err_epochs.append(err_epoch)
@@ -139,7 +139,7 @@ def main():
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--obs_len', type=int, default=16)
-    parser.add_argument('--pred_len', type=int, default=15)
+    parser.add_argument('--pred_len', type=int, default=25)
     parser.add_argument('--in_channels', type=int, default=2)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
     parser.add_argument('--temporal_kernel_size', type=int, default=3)
@@ -161,6 +161,8 @@ def main():
     parser.add_argument('--frame_skip', type=int, default=2)
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--pretrain_epochs', type=int, default=0)
+    parser.add_argument('--min_agent_train', type=int, default=1)
+    parser.add_argument('--min_agent_test', type=int, default=1)
 
     args = parser.parse_args()
 
@@ -172,8 +174,8 @@ def main():
         train_loader = state['train']
         test_loader = state['test']
     else:
-        _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
-        _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+        _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'), min_agent=args.min_agent_train)
+        _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'), min_agent=args.min_agent_test)
 
         state = {}
         state['train'] = train_loader

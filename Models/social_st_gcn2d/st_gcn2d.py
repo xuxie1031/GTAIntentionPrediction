@@ -118,14 +118,14 @@ class ST_GCN2D(nn.Module):
                 nn.BatchNorm2d(out_channels)
             )
         
-        self.relu = nn.ReLU()
+        self.leaky_relu = nn.LeakyReLU(0.1)
 
     
     def forward(self, x, A):
         res = self.residual(x)
         if self.apply_gcn:
             x, A = self.gcn(x, A)
-        x = self.relu(self.tcn(x)+res)
+        x = self.leaky_relu(self.tcn(x)+res)
         # x = self.relu(x+res)
 
         return x, A
@@ -168,9 +168,9 @@ class STGCN2DModel(nn.Module):
 
         self.hidden = nn.Linear(enc_hidden_size, self_hidden_size)
 
-        self.dec = nn.LSTM(32+self_hidden_size, dec_hidden_size)
+        self.dec = nn.LSTM(40+self_hidden_size, dec_hidden_size)
         if gru:
-            self.dec = nn.GRU(32+self_hidden_size, dec_hidden_size)
+            self.dec = nn.GRU(40+self_hidden_size, dec_hidden_size)
 
         self.output = nn.Linear(dec_hidden_size, out_dim)
         
@@ -188,30 +188,30 @@ class STGCN2DModel(nn.Module):
 
         x = self.leaky_relu(self.dyn(x))
 
-        # for i, data in enumerate(x):
-        #     h_enc, tup_enc = self.enc(data)
-        #     o_enc[i, :] = h_enc
-        #     o_enc_h[i, :] = tup_enc[0].view(V, self.enc_dim)
-
-        # x = o_enc.permute(0, 3, 1, 2).contiguous()
-
-        # for gcn in self.st_gcn2d_modules:
-        #     x, _ = gcn(x, A)
-        
-        # _, C, T, V = x.size()
-        # x = x.permute(0, 3, 1, 2).contiguous()
-        # data_pool = nn.MaxPool2d((1, 2), padding=(0, 1))
-        # x = data_pool(x)
-        # x = x.view(-1, V, C*5)
-
         for i, data in enumerate(x):
-            _, tup_enc = self.enc(data)
+            h_enc, tup_enc = self.enc(data)
+            o_enc[i, :] = h_enc
             o_enc_h[i, :] = tup_enc[0].view(V, self.enc_dim)
 
-        x = o_enc_h.clone()
-        x = x.permute(0, 2, 1)
-        x, _ = self.naive_gcn(x, A)
-        x = x.permute(0, 2, 1)
+        x = o_enc.permute(0, 3, 1, 2).contiguous()
+
+        for gcn in self.st_gcn2d_modules:
+            x, _ = gcn(x, A)
+        
+        _, C, T, V = x.size()
+        x = x.permute(0, 3, 1, 2).contiguous()
+        data_pool = nn.MaxPool2d((1, 2), padding=(0, 1))
+        x = data_pool(x)
+        x = x.view(-1, V, C*5)
+
+        # for i, data in enumerate(x):
+            # _, tup_enc = self.enc(data)
+            # o_enc_h[i, :] = tup_enc[0].view(V, self.enc_dim)
+
+        # x = o_enc_h.clone()
+        # x = x.permute(0, 2, 1)
+        # x, _ = self.naive_gcn(x, A)
+        # x = x.permute(0, 2, 1)
 
         o_enc_h = self.leaky_relu(self.hidden(o_enc_h))
         

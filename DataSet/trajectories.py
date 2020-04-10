@@ -23,7 +23,7 @@ def read_file(path, delim=','):
 
 
 class TrajectoryDataset(Dataset):
-    def __init__(self, data_dir, obs_len=8, pred_len=12, frame_skip=1, num_feature=4, min_agent=1, delim=','):
+    def __init__(self, data_dir, obs_len=8, pred_len=12, frame_skip=1, num_feature=4, min_agent=60, max_agent=70, delim=','):
         super(TrajectoryDataset, self).__init__()
 
         self.data_dir = data_dir
@@ -33,6 +33,7 @@ class TrajectoryDataset(Dataset):
         self.num_feature = num_feature
         self.seq_len = obs_len+pred_len
         self.min_agent = min_agent
+        self.max_agent = max_agent
         self.delim = delim
 
         all_files = os.listdir(self.data_dir)

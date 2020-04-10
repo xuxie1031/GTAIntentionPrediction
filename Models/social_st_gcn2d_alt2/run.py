@@ -38,7 +38,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 			t_start = time.time()
 			for i in range(batch_size):
-				masks = data_masks(num_node_list[i], args.grid_size, args.grid_size, args.enc_hidden_size)
+				masks = data_masks(num_node_list[i], args.grid_size, args.enc_hidden_size)
 				input_data, pred_data = input_data_list[i], pred_data_list[i]
                                 
 				data = torch.cat((input_data, pred_data), dim=0)
@@ -91,7 +91,7 @@ def exec_model(dataloader_train, dataloader_test, args):
 
 			t_start = time.time()
 			for i in range(batch_size):
-				masks = data_masks(num_node_list[i], args.grid_size, args.grid_size, args.enc_hidden_size)
+				masks = data_masks(num_node_list[i], args.grid_size, args.enc_hidden_size)
 				input_data, pred_data = input_data_list[i], pred_data_list[i]
 
 				input_data, first_values_dict = data_vectorize(input_data)
@@ -108,8 +108,8 @@ def exec_model(dataloader_train, dataloader_test, args):
 				preds = net(inputs, ngbrs, masks)
 				ret_data = data_revert(preds[:, :, :2], first_values_dict)
 
-				error = displacement_error(ret_data[:15, :, :], pred_data[:15, :, :2])
-				err_batch += error.item()
+				error = displacement_error(ret_data[:, :, :], pred_data[:, :, :2])[14]
+                                err_batch += error.item()
 
 			t_end = time.time()
 			err_batch /= batch_size
@@ -130,7 +130,7 @@ def main():
 	parser.add_argument('--num_worker', type=int, default=4)
 	parser.add_argument('--batch_size', type=int, default=64)
 	parser.add_argument('--obs_len', type=int, default=16)
-	parser.add_argument('--pred_len', type=int, default=15)
+	parser.add_argument('--pred_len', type=int, default=25)
 	parser.add_argument('--in_channels', type=int, default=2)
 	# parser.add_argument('--spatial_kernel_size', type=int, default=2)
 	# parser.add_argument('--temporal_kernel_size', type=int, default=3)
@@ -139,7 +139,7 @@ def main():
 	parser.add_argument('--enc_hidden_size', type=int, default=64)
 	parser.add_argument('--dec_hidden_size', type=int, default=128)
 	parser.add_argument('--out_dim', type=int, default=5)
-	parser.add_argument('--grid_size', type=int, default=8)
+	parser.add_argument('--grid_size', type=int, default=12)
 	parser.add_argument('--lr', type=float, default=1e-3)
 	# parser.add_argument('--grad_clip', type=float, default=10.0)
 	parser.add_argument('--dropout', type=float, default=0.0)
