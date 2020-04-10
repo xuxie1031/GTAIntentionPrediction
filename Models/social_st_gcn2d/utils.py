@@ -125,7 +125,8 @@ def displacement_error(pred_traj, pred_traj_gt, mode='raw'):
     loss = loss**2
     # loss = torch.sqrt(loss.sum(dim=2)).sum(dim=1)
     # loss = torch.sqrt(loss.sum(dim=2)).mean(dim=1)
-    loss = torch.sqrt(loss.sum(dim=2).mean(dim=1))
+    # loss = torch.sqrt(loss.sum(dim=2).mean(dim=1))
+    loss = loss.sum(dim=2).sum(dim=1)
 
     if mode == 'sum':
         return torch.sum(loss)

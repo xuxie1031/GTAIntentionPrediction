@@ -84,6 +84,7 @@ def exec_model(dataloader_train, dataloader_test, args):
         print('****** Testing beginning ******')
         err_epoch = 0.0
 
+        num_count = 0
         num_batch = 0
         for batch in dataloader_test:
             input_data_list, pred_data_list, _, num_nodes_list = batch
@@ -113,16 +114,20 @@ def exec_model(dataloader_train, dataloader_test, args):
                 error = 0.0
                 for i in range(len(preds)):
                     error += displacement_error(batch_ret_data[i][:, :, :], batch_pred_data[i][:, :, :2])[-1]
+                    num_count += num
                     # error += final_displacement_error(batch_ret_data[i][-1], batch_pred_data[i][-1][:, :2])
-                err_batch = error.item() / batch_size
+                # err_batch = error.item() / batch_size
 
                 t_end = time.time()
-                err_epoch += err_batch
+                # err_epoch += err_batch
+                err_epoch += error.item()
                 num_batch += 1
 
-                print('epoch {}, batch {}, test_error = {:.6f}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, num, t_end-t_start))
+                # print('epoch {}, batch {}, test_error = {:.6f}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, num, t_end-t_start))
+                print('epoch {}, batch {}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, num, t_end-t_start))
 
-        err_epoch /= num_batch
+        # err_epoch /= num_batch
+        err_epoch = torch.sqrt(err_epoch/num_count)
         err_epochs.append(err_epoch)
         print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
         print(err_epochs)
