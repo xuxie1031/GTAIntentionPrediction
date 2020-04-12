@@ -8,6 +8,7 @@ from st_gcn2d import STGCN2DModel
 from graph_full import Graph
 from utils import *
 
+import math
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
@@ -113,21 +114,21 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 error = 0.0
                 for i in range(len(preds)):
-                    error += displacement_error(batch_ret_data[i][:, :, :], batch_pred_data[i][:, :, :2])[-1]
+                    error += displacement_error(batch_ret_data[i][:, :, :], batch_pred_data[i][:, :, :2])[-1].item()
                     num_count += num
+                print('curr batch: error = {:.6f}, num = {}'.format(math.sqrt(error/batch_size/num), num))
                     # error += final_displacement_error(batch_ret_data[i][-1], batch_pred_data[i][-1][:, :2])
                 # err_batch = error.item() / batch_size
-
                 t_end = time.time()
                 # err_epoch += err_batch
-                err_epoch += error.item()
+                err_epoch += error
                 num_batch += 1
 
                 # print('epoch {}, batch {}, test_error = {:.6f}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, num, t_end-t_start))
                 print('epoch {}, batch {}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, num, t_end-t_start))
-
+                
         # err_epoch /= num_batch
-        err_epoch = torch.sqrt(err_epoch/num_count)
+        err_epoch = math.sqrt(err_epoch/num_count)
         err_epochs.append(err_epoch)
         print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
         print(err_epochs)
@@ -166,8 +167,8 @@ def main():
     parser.add_argument('--frame_skip', type=int, default=2)
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--pretrain_epochs', type=int, default=0)
-    parser.add_argument('--min_agent_train', type=int, default=1)
-    parser.add_argument('--min_agent_test', type=int, default=1)
+    parser.add_argument('--min_agent_train', type=int, default=40)
+    parser.add_argument('--min_agent_test', type=int, default=40)
 
     args = parser.parse_args()
 

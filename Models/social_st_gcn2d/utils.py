@@ -121,7 +121,8 @@ def mse_loss(pred_out, pred_data):
 
 
 def displacement_error(pred_traj, pred_traj_gt, mode='raw'):
-    loss = pred_traj_gt.permute(1, 0, 2)-pred_traj.permute(1, 0, 2)
+    # loss = pred_traj_gt.permute(1, 0, 2)-pred_traj.permute(1, 0, 2)
+    loss = pred_traj_gt-pred_traj
     loss = loss**2
     # loss = torch.sqrt(loss.sum(dim=2)).sum(dim=1)
     # loss = torch.sqrt(loss.sum(dim=2)).mean(dim=1)

@@ -147,7 +147,7 @@ class NGSIMDataset():
         # test_data = converted_data[:bound, :]
         
         bound1 = int(converted_data.shape[0]*0.8)
-        bound2 = int(converted_data.shape[0]*1.0)
+        bound2 = int(converted_data.shape[0]*0.9)
         train_data = np.concatenate([converted_data[:bound1, :], converted_data[bound2:, :]], axis=0)
         test_data = converted_data[bound1:bound2, :]
 
