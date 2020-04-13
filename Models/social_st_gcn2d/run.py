@@ -167,8 +167,8 @@ def main():
     parser.add_argument('--frame_skip', type=int, default=2)
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--pretrain_epochs', type=int, default=0)
-    parser.add_argument('--min_agent_train', type=int, default=40)
-    parser.add_argument('--min_agent_test', type=int, default=40)
+    parser.add_argument('--min_agent_train', type=int, default=1)
+    parser.add_argument('--min_agent_test', type=int, default=1)
 
     args = parser.parse_args()
 
