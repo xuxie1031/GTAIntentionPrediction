@@ -5,9 +5,10 @@ import torch.optim as optim
 import argparse
 import time
 from st_gcn2d import STGCN2DModel
-from graph import Graph
+from graph_full import Graph
 from utils import *
 
+import math
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), '..', '..', 'DataSet'))
@@ -20,11 +21,10 @@ def exec_model(dataloader_train, dataloader_test, args):
     if args.use_cuda:
         dev = torch.device('cuda:'+str(args.gpu))
 
-    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.enc_hidden_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout) # , residual=args.residual TONY Change
+    net = STGCN2DModel(args.pred_len, args.in_channels, args.spatial_kernel_size, args.temporal_kernel_size, args.dyn_hidden_size, args.self_hidden_size, args.enc_hidden_size, args.dec_hidden_size, args.out_dim, args.gru, args.use_cuda, dev, dropout=args.dropout, residual=args.residual)
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     err_epochs = []
-    train_errs = []
     for epoch in range(args.num_epochs):
         net.train()
         print('****** Training beginning ******')
@@ -69,7 +69,7 @@ def exec_model(dataloader_train, dataloader_test, args):
                 optimizer.zero_grad()
                 loss.backward()
 
-                torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
+                # torch.nn.utils.clip_grad_norm_(net.parameters(), args.grad_clip)
                 optimizer.step()
 
                 t_end = time.time()
@@ -79,13 +79,13 @@ def exec_model(dataloader_train, dataloader_test, args):
                 print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
 
         loss_epoch /= num_batch
-        train_errs.append(loss_epoch)
         print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
-        print(train_errs)
+
         net.eval()
         print('****** Testing beginning ******')
         err_epoch = 0.0
 
+        num_count = 0
         num_batch = 0
         for batch in dataloader_test:
             input_data_list, pred_data_list, _, num_nodes_list = batch
@@ -114,17 +114,21 @@ def exec_model(dataloader_train, dataloader_test, args):
 
                 error = 0.0
                 for i in range(len(preds)):
-                    error += displacement_error(batch_ret_data[i][:15, :, :], batch_pred_data[i][:15, :, :2])
+                    error += displacement_error(batch_ret_data[i][:, :, :], batch_pred_data[i][:, :, :2])[-1].item()
+                    num_count += num
+                print('curr batch: error = {:.6f}, num = {}'.format(math.sqrt(error/batch_size/num), num))
                     # error += final_displacement_error(batch_ret_data[i][-1], batch_pred_data[i][-1][:, :2])
-                err_batch = error.item() / batch_size
-
+                # err_batch = error.item() / batch_size
                 t_end = time.time()
-                err_epoch += err_batch
+                # err_epoch += err_batch
+                err_epoch += error
                 num_batch += 1
 
-                print('epoch {}, batch {}, test_error = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, t_end-t_start))
-
-        err_epoch /= num_batch
+                # print('epoch {}, batch {}, test_error = {:.6f}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, err_batch, num, t_end-t_start))
+                print('epoch {}, batch {}, num = {}, time/batch = {:.3f}'.format(epoch, num_batch, num, t_end-t_start))
+                
+        # err_epoch /= num_batch
+        err_epoch = math.sqrt(err_epoch/num_count)
         err_epochs.append(err_epoch)
         print('epoch {}, test_err = {:.6f}\n'.format(epoch, err_epoch))
         print(err_epochs)
@@ -140,17 +144,19 @@ def main():
 
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--obs_len', type=int, default=15)
+    parser.add_argument('--obs_len', type=int, default=16)
     parser.add_argument('--pred_len', type=int, default=25)
     parser.add_argument('--in_channels', type=int, default=2)
     parser.add_argument('--spatial_kernel_size', type=int, default=2)
     parser.add_argument('--temporal_kernel_size', type=int, default=3)
-    parser.add_argument('--enc_hidden_size', type=int, default=16)
-    parser.add_argument('--dec_hidden_size', type=int, default=256)
+    parser.add_argument('--dyn_hidden_size', type=int, default=32)
+    parser.add_argument('--self_hidden_size', type=int, default=32)
+    parser.add_argument('--enc_hidden_size', type=int, default=64)
+    parser.add_argument('--dec_hidden_size', type=int, default=128)
     parser.add_argument('--out_dim', type=int, default=5)
-    parser.add_argument('--lr', type=float, default=3e-3)
+    parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--grad_clip', type=float, default=10.0)
-    parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--dropout', type=float, default=0.0)
     parser.add_argument('--residual', action='store_true', default=False)
     parser.add_argument('--gru', action='store_true', default=False)
     parser.add_argument('--use_cuda', action='store_true', default=True)
@@ -159,8 +165,10 @@ def main():
     parser.add_argument('--dset_tag', type=str, default="NGSIM")
     parser.add_argument('--dset_feature', type=int, default=4)
     parser.add_argument('--frame_skip', type=int, default=2)
-    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--pretrain_epochs', type=int, default=0)
+    parser.add_argument('--min_agent_train', type=int, default=1)
+    parser.add_argument('--min_agent_test', type=int, default=1)
 
     args = parser.parse_args()
 
@@ -172,8 +180,8 @@ def main():
         train_loader = state['train']
         test_loader = state['test']
     else:
-        _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'))
-        _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'))
+        _, train_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'train'), min_agent=args.min_agent_train)
+        _, test_loader = data_loader(args, os.path.join(os.getcwd(), '..', '..', 'DataSet', 'dataset', args.dset_name, args.dset_tag, 'test'), min_agent=args.min_agent_test)
 
         state = {}
         state['train'] = train_loader
