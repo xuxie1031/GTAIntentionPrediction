@@ -23,7 +23,7 @@ def read_file(path, delim=','):
 
 
 class TrajectoryDataset(Dataset):
-    def __init__(self, data_dir, obs_len=8, pred_len=12, frame_skip=1, num_feature=4, min_agent=1, max_agent=50, delim=','):
+    def __init__(self, data_dir, obs_len=8, pred_len=12, frame_skip=1, num_feature=4, min_agent=1, delim=','):
         super(TrajectoryDataset, self).__init__()
 
         self.data_dir = data_dir
@@ -33,7 +33,6 @@ class TrajectoryDataset(Dataset):
         self.num_feature = num_feature
         self.seq_len = obs_len+pred_len
         self.min_agent = min_agent
-        self.max_agent = max_agent
         self.delim = delim
 
         all_files = os.listdir(self.data_dir)
@@ -106,7 +105,6 @@ class TrajectoryDataset(Dataset):
                 # count_ped = len(np.argwhere(curr_ids[:num_nodes] >= 100))
 
                 # if num_nodes > self.min_agent and count_veh > 0 and count_ped > 0:
-                # if num_nodes > self.min_agent and num_nodes < self.max_agent and agent_flag:
                 if num_nodes > self.min_agent and agent_flag:
                     num_nodes_seq_list.append(num_nodes)  # number of agents in the frame seq
                     ids_seq_list.append(curr_ids[:num_nodes])  # numpy of ids in the frame seq
