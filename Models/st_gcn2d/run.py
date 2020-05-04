@@ -24,6 +24,7 @@ def exec_model(dataloader_train, dataloader_test, args):
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
     err_epochs = []
+    train_errs = []
     for epoch in range(args.num_epochs):
         net.train()
         print('****** Training beginning ******')
@@ -78,8 +79,9 @@ def exec_model(dataloader_train, dataloader_test, args):
                 print('epoch {}, batch {}, train_loss = {:.6f}, time/batch = {:.3f}'.format(epoch, num_batch, loss_batch, t_end-t_start))
 
         loss_epoch /= num_batch
+        train_errs.append(loss_epoch)
         print('epoch {}, train_loss = {:.6f}\n'.format(epoch, loss_epoch))
-
+        print(train_errs)
         net.eval()
         print('****** Testing beginning ******')
         err_epoch = 0.0
