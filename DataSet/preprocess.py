@@ -140,7 +140,11 @@ class NGSIMDataset():
 
     
     def data_save(self, converted_data):
+<<<<<<< HEAD
         converted_data = converted_data[converted_data.shape[0]*4//10:converted_data.shape[0]*7//10, :]
+=======
+        converted_data = converted_data[converted_data.shape[0]*0//10:converted_data.shape[0]*2//10, :]
+>>>>>>> parent of e29953c... Merge branch 'master' into pr/4
 
         # bound = int(converted_data.shape[0]*0.2)
         # train_data = converted_data[bound:, :]
