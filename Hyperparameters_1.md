@@ -7,6 +7,8 @@ STGCN2d Hyperparameter 1:
 
 (other arguments are default)
 
+Result 9
+
 -----------------------------------
 STGCN2d Hyperparameter 2:
 
@@ -15,6 +17,8 @@ STGCN2d Hyperparameter 2:
 --obs_len 10 -pred_len 12 --frame_skip 2 --num_epochs 50
 
 (other arguments are default)
+
+Result 10
 
 -----------------------------------
 
@@ -26,6 +30,8 @@ STGCN3d Hyperparameter 1:
 
 (other arguments are default)
 
+Result 9
+
 ------------------------------------
 
 STGCN3d Hyperparameter 2: 
@@ -35,3 +41,5 @@ STGCN3d Hyperparameter 2:
 --obs_len 10 -pred_len 12 --frame_skip 2 --num_epochs 50
 
 (other arguments are default)
+
+Result 10
